@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import { Vazirmatn } from "next/font/google";
 import "./globals.css";
 
-const vazirmatn = Vazirmatn({
-  variable: "--font-vazirmatn",
-  subsets: ["arabic"],
-  display: "swap",
-});
+// استفاده از system font برای جلوگیری از مشکل در build time
+// در صورت نیاز می‌توانید فونت Vazirmatn را از Google Fonts استفاده کنید
+// اما برای build در Docker، از system font استفاده می‌کنیم
 
 export const metadata: Metadata = {
   title: "پیوندیار | ویرایش انبوه محصولات باسلام",
@@ -20,9 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fa" dir="rtl">
-      <body
-        className={`${vazirmatn.variable} font-sans antialiased`}
-      >
+      <body className="font-sans antialiased">
         {children}
       </body>
     </html>
