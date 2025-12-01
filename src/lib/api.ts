@@ -92,15 +92,17 @@ async function apiRequest<T>(
       return { success: true, data: text as any };
     }
   } catch (error) {
-    // لاگ کردن خطا فقط در محیط development و client-side
-    if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
+    // لاگ کردن خطا - فقط در client-side
+    // حذف استفاده از process.env برای جلوگیری از مشکل در build time
+    if (typeof window !== "undefined") {
       try {
+        // فقط در browser لاگ کن (در production هم می‌توانیم لاگ کنیم)
         console.error("API request failed:", {
           endpoint,
           error: error instanceof Error ? error.message : String(error),
         });
       } catch {
-        // اگر console.error هم خطا داد، نادیده بگیر
+        // اگر console.error خطا داد، نادیده بگیر
       }
     }
     throw error;
