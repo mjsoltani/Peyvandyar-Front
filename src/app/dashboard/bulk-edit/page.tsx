@@ -143,11 +143,11 @@ export default function BulkEditPage() {
 
     // فیلتر کردن فیلدهای خالی
     const updateData: BulkEditForm = {};
-    if (bulkForm.price !== undefined && bulkForm.price !== null && bulkForm.price !== "") {
-      updateData.price = Number(bulkForm.price);
+    if (bulkForm.price !== undefined && bulkForm.price !== null) {
+      updateData.price = bulkForm.price;
     }
-    if (bulkForm.stock !== undefined && bulkForm.stock !== null && bulkForm.stock !== "") {
-      updateData.stock = Number(bulkForm.stock);
+    if (bulkForm.stock !== undefined && bulkForm.stock !== null) {
+      updateData.stock = bulkForm.stock;
     }
     if (bulkForm.status) {
       updateData.status = bulkForm.status;
