@@ -15,6 +15,16 @@ function AuthCallbackContent() {
     vendor_title?: string;
   } | null>(null);
 
+  // Debug: Log URL parameters
+  useEffect(() => {
+    console.log("Callback URL params:", {
+      token: searchParams.get("token")?.substring(0, 50),
+      encrypted_token: searchParams.get("encrypted_token")?.substring(0, 50),
+      code: searchParams.get("code"),
+      data: searchParams.get("data")?.substring(0, 50),
+    });
+  }, [searchParams]);
+
   useEffect(() => {
     // چک کردن اگر توکن مستقیم در URL هست
     const token = searchParams.get("token");
@@ -22,16 +32,31 @@ function AuthCallbackContent() {
     
     // اگر توکن در URL هست
     if (token || encryptedToken) {
-      const finalToken = token || encryptedToken;
-      setAuthToken(finalToken!);
-      
-      setStatus("success");
-      setMessage("ورود موفقیت‌آمیز! در حال انتقال به داشبورد...");
-      
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 2000);
-      return;
+      try {
+        // Decode توکن از URL encoding
+        const finalToken = token 
+          ? decodeURIComponent(token) 
+          : encryptedToken 
+            ? decodeURIComponent(encryptedToken) 
+            : null;
+        
+        if (finalToken) {
+          setAuthToken(finalToken);
+          
+          setStatus("success");
+          setMessage("ورود موفقیت‌آمیز! در حال انتقال به داشبورد...");
+          
+          setTimeout(() => {
+            router.push("/dashboard");
+          }, 2000);
+          return;
+        }
+      } catch (error) {
+        console.error("Error decoding token:", error);
+        setStatus("error");
+        setMessage("خطا در پردازش توکن احراز هویت");
+        return;
+      }
     }
 
     // چک کردن اگر داده JSON در URL هست (از بکند)
@@ -94,6 +119,22 @@ function AuthCallbackContent() {
     setStatus("error");
     setMessage("اطلاعات احراز هویت یافت نشد. لطفاً دوباره تلاش کنید.");
   }, [searchParams, router]);
+
+  // Handle error code from URL
+  useEffect(() => {
+    const errorCode = searchParams.get("error_code");
+    const error = searchParams.get("error");
+    
+    if (errorCode || error) {
+      console.error("Auth error:", { errorCode, error });
+      setStatus("error");
+      setMessage(
+        errorCode === "-102" 
+          ? "خطا در ارتباط با سرور احراز هویت. لطفاً دوباره تلاش کنید."
+          : error || "خطا در احراز هویت"
+      );
+    }
+  }, [searchParams]);
 
   return (
     <div 

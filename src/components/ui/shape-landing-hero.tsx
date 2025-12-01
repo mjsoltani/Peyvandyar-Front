@@ -148,7 +148,7 @@ function HeroGeometric({
             </div>
 
             {/* Main content */}
-            <div className="relative z-10 container mx-auto px-4 md:px-6">
+            <div className="relative z-20 container mx-auto px-4 md:px-6">
                 <div className="max-w-3xl mx-auto text-center">
                     {/* Badge */}
                     <motion.div
@@ -204,19 +204,22 @@ function HeroGeometric({
                         variants={fadeUpVariants}
                         initial="hidden"
                         animate="visible"
+                        className="relative z-30"
                     >
-                        <a 
-                            href={BASALAM_SSO_URL}
-                            className="inline-block px-10 py-3.5 bg-gradient-to-l from-orange-600 to-orange-500 text-white font-bold rounded-xl hover:shadow-xl hover:shadow-orange-500/30 transition-all duration-300 hover:-translate-y-1 text-lg"
+                        <button
+                            onClick={() => {
+                                window.location.href = BASALAM_SSO_URL;
+                            }}
+                            className="relative z-30 px-10 py-3.5 bg-gradient-to-l from-orange-600 to-orange-500 text-white font-bold rounded-xl hover:shadow-xl hover:shadow-orange-500/30 transition-all duration-300 hover:-translate-y-1 text-lg cursor-pointer"
                         >
                             شروع کنید
-                        </a>
+                        </button>
                     </motion.div>
                 </div>
             </div>
 
             {/* Bottom gradient fade */}
-            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-white/30 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-white/30 pointer-events-none z-0" />
         </div>
     );
 }

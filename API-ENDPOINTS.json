@@ -1,0 +1,465 @@
+{
+  "base_url": "https://peyvandyar.amintvk.ir",
+  "authentication": {
+    "type": "Encrypted Token",
+    "header": "X-Encrypted-Token",
+    "value": "a1b2c3d4e5f6:9f8e7d6c5b4a3210..."
+  },
+  "endpoints": [
+    {
+      "name": "Health Check",
+      "method": "GET",
+      "path": "/health",
+      "auth_required": false,
+      "description": "بررسی وضعیت سرور",
+      "request": {},
+      "response_example": {
+        "status": "OK",
+        "timestamp": "2025-12-01T08:30:00.000Z",
+        "token_loaded": true,
+        "user_loaded": true
+      }
+    },
+    {
+      "name": "OAuth Callback",
+      "method": "GET",
+      "path": "/api/webhook/oauth",
+      "auth_required": false,
+      "description": "دریافت code از OAuth و redirect به frontend",
+      "request": {
+        "query_params": {
+          "code": "def5020049ed0b3c7b1e6518893ba2593af458d47e60b73291b62f16...",
+          "state": "amin"
+        }
+      },
+      "response": "Redirect to: http://localhost:3001/auth/callback?encrypted_token=..."
+    },
+    {
+      "name": "OAuth Webhook (POST)",
+      "method": "POST",
+      "path": "/api/webhook/oauth",
+      "auth_required": false,
+      "description": "ارسال دستی code برای دریافت token",
+      "request": {
+        "body": {
+          "code": "def5020049ed0b3c7b1e6518893ba2593af458d47e60b73291b62f16...",
+          "client_id": "1119",
+          "client_secret": "BpHe6QJb9sEQD4Qb1zwLqZxlFYlcRSlIpm5OwPm4",
+          "redirect_uri": "https://peyvandyar.amintvk.ir/api/webhook/oauth",
+          "username": "admin"
+        }
+      },
+      "response_example": {
+        "success": true,
+        "message": "OAuth token received and saved successfully",
+        "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "token_type": "Bearer",
+        "expires_in": 31536000,
+        "user": {
+          "username": "admin",
+          "basalam_user_id": 14268363,
+          "basalam_vendor_id": 1105867,
+          "vendor_title": "عطرفروشی مجتبی"
+        }
+      }
+    },
+    {
+      "name": "Get Current User",
+      "method": "GET",
+      "path": "/api/me",
+      "auth_required": true,
+      "description": "دریافت اطلاعات کاربر فعلی",
+      "request": {
+        "headers": {
+          "X-Encrypted-Token": "a1b2c3d4e5f6:9f8e7d6c5b4a3210..."
+        }
+      },
+      "response_example": {
+        "success": true,
+        "user": {
+          "username": "admin",
+          "basalam_user_id": 14268363,
+          "basalam_vendor_id": 1105867,
+          "vendor_title": "عطرفروشی مجتبی",
+          "last_used_at": "2025-12-01T08:30:00.000Z"
+        }
+      }
+    },
+    {
+      "name": "Verify Token",
+      "method": "POST",
+      "path": "/api/verify-token",
+      "auth_required": false,
+      "description": "بررسی اعتبار encrypted token",
+      "request": {
+        "body": {
+          "encrypted_token": "a1b2c3d4e5f6:9f8e7d6c5b4a3210..."
+        }
+      },
+      "response_example": {
+        "success": true,
+        "valid": true,
+        "user": {
+          "username": "admin",
+          "basalam_vendor_id": 1105867,
+          "vendor_title": "عطرفروشی مجتبی"
+        }
+      }
+    },
+    {
+      "name": "Get User Info",
+      "method": "GET",
+      "path": "/api/user",
+      "auth_required": false,
+      "description": "دریافت اطلاعات کاربر (از global token)",
+      "request": {},
+      "response_example": {
+        "success": true,
+        "data": {
+          "id": 14268363,
+          "username": "محمد جواد سلطانی",
+          "vendor": {
+            "id": 1105867,
+            "title": "عطرفروشی مجتبی"
+          }
+        }
+      }
+    },
+    {
+      "name": "Get Vendor ID",
+      "method": "GET",
+      "path": "/api/vendor-id",
+      "auth_required": false,
+      "description": "دریافت شناسه فروشگاه",
+      "request": {},
+      "response_example": {
+        "success": true,
+        "vendor_id": 1105867,
+        "vendor_title": "عطرفروشی مجتبی",
+        "vendor_identifier": "mojtabaatrstore"
+      }
+    },
+    {
+      "name": "Refresh User Info",
+      "method": "POST",
+      "path": "/api/refresh",
+      "auth_required": false,
+      "description": "به‌روزرسانی اطلاعات کاربر",
+      "request": {},
+      "response_example": {
+        "success": true,
+        "message": "User info refreshed",
+        "data": {
+          "id": 14268363,
+          "vendor": {
+            "id": 1105867,
+            "title": "عطرفروشی مجتبی"
+          }
+        }
+      }
+    },
+    {
+      "name": "Get Products",
+      "method": "GET",
+      "path": "/api/products",
+      "auth_required": true,
+      "description": "دریافت لیست محصولات با صفحه‌بندی",
+      "request": {
+        "headers": {
+          "X-Encrypted-Token": "a1b2c3d4e5f6:9f8e7d6c5b4a3210..."
+        },
+        "query_params": {
+          "page": 1,
+          "per_page": 10
+        }
+      },
+      "response_example": {
+        "success": true,
+        "vendor_id": 1105867,
+        "pagination": {
+          "current_page": 1,
+          "per_page": 10,
+          "total": 50,
+          "last_page": 5
+        },
+        "data": {
+          "data": [
+            {
+              "id": 27722241,
+              "title": "محصول نمونه",
+              "primary_price": 1925000,
+              "stock": 117
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Single Product",
+      "method": "GET",
+      "path": "/api/products/{productId}",
+      "auth_required": true,
+      "description": "دریافت جزئیات یک محصول",
+      "request": {
+        "headers": {
+          "X-Encrypted-Token": "a1b2c3d4e5f6:9f8e7d6c5b4a3210..."
+        },
+        "path_params": {
+          "productId": 26771208
+        }
+      },
+      "response_example": {
+        "success": true,
+        "product_id": "26771208",
+        "data": {
+          "id": 26771208,
+          "title": "مانتو کتی ژاکارد نخ کوکدوزی",
+          "primary_price": 35300000,
+          "inventory": 42,
+          "variants": []
+        }
+      }
+    },
+    {
+      "name": "Batch Update Products",
+      "method": "PATCH",
+      "path": "/api/products/batch-update",
+      "auth_required": true,
+      "description": "به‌روزرسانی دسته‌ای محصولات (تا 200 محصول)",
+      "request": {
+        "headers": {
+          "X-Encrypted-Token": "a1b2c3d4e5f6:9f8e7d6c5b4a3210...",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "products": [
+            {
+              "id": 27722241,
+              "primary_price": 1925000,
+              "stock": 117
+            },
+            {
+              "id": 26771254,
+              "variants": [
+                {
+                  "id": 10686835,
+                  "primary_price": 7350000,
+                  "stock": 10
+                },
+                {
+                  "id": 10686836,
+                  "primary_price": 7350000,
+                  "stock": 5
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "response_example": {
+        "success": true,
+        "vendor_id": 1105867,
+        "updated_count": 2,
+        "data": {
+          "message": "Products updated successfully"
+        }
+      }
+    },
+    {
+      "name": "Update Single Product",
+      "method": "PATCH",
+      "path": "/api/products/{productId}",
+      "auth_required": true,
+      "description": "به‌روزرسانی یک محصول",
+      "request": {
+        "headers": {
+          "X-Encrypted-Token": "a1b2c3d4e5f6:9f8e7d6c5b4a3210...",
+          "Content-Type": "application/json"
+        },
+        "path_params": {
+          "productId": 26771208
+        },
+        "body": {
+          "primary_price": 35500000,
+          "stock": 50
+        }
+      },
+      "response_example": {
+        "success": true,
+        "product_id": "26771208",
+        "data": {
+          "id": 26771208,
+          "primary_price": 35500000
+        }
+      }
+    },
+    {
+      "name": "Set Token",
+      "method": "POST",
+      "path": "/api/token/set",
+      "auth_required": false,
+      "description": "ذخیره توکن به صورت دستی",
+      "request": {
+        "body": {
+          "token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+          "username": "admin"
+        }
+      },
+      "response_example": {
+        "success": true,
+        "message": "Token saved successfully",
+        "user": {
+          "username": "admin",
+          "basalam_user_id": 14268363,
+          "basalam_vendor_id": 1105867,
+          "vendor_title": "عطرفروشی مجتبی"
+        }
+      }
+    },
+    {
+      "name": "Get Token Info",
+      "method": "GET",
+      "path": "/api/token/info",
+      "auth_required": false,
+      "description": "دریافت اطلاعات توکن",
+      "request": {
+        "query_params": {
+          "username": "admin"
+        }
+      },
+      "response_example": {
+        "success": true,
+        "data": {
+          "username": "admin",
+          "basalam_user_id": 14268363,
+          "basalam_vendor_id": 1105867,
+          "vendor_title": "عطرفروشی مجتبی",
+          "status": "approved",
+          "token_preview": "eyJ0eXAiOi..."
+        }
+      }
+    },
+    {
+      "name": "Delete Token",
+      "method": "DELETE",
+      "path": "/api/token/delete",
+      "auth_required": false,
+      "description": "حذف توکن کاربر",
+      "request": {
+        "body": {
+          "username": "admin"
+        }
+      },
+      "response_example": {
+        "success": true,
+        "message": "Token deleted successfully",
+        "username": "admin"
+      }
+    },
+    {
+      "name": "Get All Users",
+      "method": "GET",
+      "path": "/api/users",
+      "auth_required": false,
+      "description": "دریافت لیست تمام کاربران",
+      "request": {},
+      "response_example": {
+        "success": true,
+        "count": 1,
+        "users": [
+          {
+            "id": 1,
+            "username": "admin",
+            "basalam_user_id": 14268363,
+            "basalam_vendor_id": 1105867,
+            "vendor_title": "عطرفروشی مجتبی",
+            "token_count": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "Get Pending Tokens",
+      "method": "GET",
+      "path": "/api/tokens/pending",
+      "auth_required": false,
+      "description": "دریافت توکن‌های در انتظار تایید",
+      "request": {},
+      "response_example": {
+        "success": true,
+        "count": 0,
+        "tokens": []
+      }
+    },
+    {
+      "name": "Approve Token",
+      "method": "POST",
+      "path": "/api/tokens/{tokenId}/approve",
+      "auth_required": false,
+      "description": "تایید توکن pending",
+      "request": {
+        "path_params": {
+          "tokenId": 5
+        },
+        "body": {
+          "approved_by": "admin"
+        }
+      },
+      "response_example": {
+        "success": true,
+        "message": "Token approved successfully",
+        "token_id": 5,
+        "approved_by": "admin"
+      }
+    },
+    {
+      "name": "Reject Token",
+      "method": "POST",
+      "path": "/api/tokens/{tokenId}/reject",
+      "auth_required": false,
+      "description": "رد کردن توکن pending",
+      "request": {
+        "path_params": {
+          "tokenId": 5
+        }
+      },
+      "response_example": {
+        "success": true,
+        "message": "Token rejected successfully",
+        "token_id": 5
+      }
+    },
+    {
+      "name": "Get Auth Token",
+      "method": "GET",
+      "path": "/api/auth/token",
+      "auth_required": false,
+      "description": "دریافت توکن decrypt شده کاربر",
+      "request": {
+        "query_params": {
+          "username": "admin"
+        }
+      },
+      "response_example": {
+        "success": true,
+        "username": "admin",
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "user_info": {
+          "basalam_user_id": 14268363,
+          "basalam_vendor_id": 1105867,
+          "vendor_title": "عطرفروشی مجتبی"
+        }
+      }
+    }
+  ],
+  "notes": {
+    "authentication": "برای endpoint های محافظت شده، یکی از این روش‌ها رو استفاده کن:",
+    "methods": [
+      "Header: X-Encrypted-Token: {encrypted_token}",
+      "Cookie: encrypted_token={encrypted_token}",
+      "Query: ?encrypted_token={encrypted_token}"
+    ],
+    "encrypted_token_format": "iv:encrypted_data (مثال: a1b2c3d4e5f6:9f8e7d6c5b4a3210...)",
+    "get_encrypted_token": "از OAuth flow یا endpoint /api/webhook/oauth"
+  }
+}

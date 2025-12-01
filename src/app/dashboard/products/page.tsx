@@ -1,0 +1,487 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getAuthToken } from "@/lib/auth";
+import { productsApi } from "@/lib/api";
+import { motion } from "framer-motion";
+import { 
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  Upload,
+  CheckSquare,
+  Square,
+  ChevronLeft,
+  ChevronRight,
+  Package,
+  Image as ImageIcon,
+  DollarSign,
+  FileText,
+  AlertCircle,
+  RefreshCw
+} from "lucide-react";
+import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { cn } from "@/lib/utils";
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  stock: number;
+  image?: string;
+  category: string;
+  status: "active" | "inactive";
+  lastModified: string;
+}
+
+export default function ProductsPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
+  const [totalProducts, setTotalProducts] = useState(0);
+  
+  const itemsPerPage = 10;
+
+  const fetchProducts = async () => {
+    try {
+      setIsLoading(true);
+      setIsError(false);
+      
+      const response = await productsApi.getProducts({
+        page: currentPage,
+        per_page: itemsPerPage,
+        search: searchQuery || undefined,
+        status: filterStatus,
+      });
+
+      if (response.success && response.data) {
+        // طبق API-ENDPOINTS.json ساختار response این است:
+        // response.data.data (آرایه محصولات)
+        // response.pagination.total (تعداد کل)
+        const productsData = response.data?.data || [];
+        const total = response.pagination?.total || response.data?.pagination?.total || 0;
+        
+        // تبدیل ساختار API به ساختار مورد نیاز کامپوننت
+        const mappedProducts = productsData.map((p: any) => ({
+          id: p.id,
+          name: p.title || p.name || "بدون نام",
+          price: p.primary_price || p.price || 0,
+          stock: p.inventory || p.stock || 0,
+          image: p.image || p.primary_image,
+          category: p.category || "بدون دسته",
+          status: p.status || "active",
+          lastModified: p.updated_at || p.last_modified || "نامشخص",
+        }));
+        
+        setProducts(mappedProducts);
+        setTotalProducts(total);
+      } else {
+        throw new Error(response.message || "خطا در دریافت محصولات");
+      }
+    } catch (error: any) {
+      console.error("Error fetching products:", error);
+      setIsError(true);
+      setErrorMessage(error.message || "خطا در ارتباط با سرور");
+      setProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const authToken = getAuthToken();
+    
+    if (!authToken) {
+      router.push("/");
+      return;
+    }
+    
+    fetchProducts();
+  }, [router, currentPage, searchQuery, filterStatus]);
+
+  const toggleProductSelection = (productId: number) => {
+    setSelectedProducts(prev =>
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedProducts.length === products.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(products.map(p => p.id));
+    }
+  };
+
+  const handleBulkEdit = async () => {
+    if (selectedProducts.length === 0) return;
+    
+    // TODO: باز کردن modal یا صفحه ویرایش انبوه
+    console.log("Bulk edit products:", selectedProducts);
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("fa-IR").format(price) + " تومان";
+  };
+
+  const totalPages = Math.ceil(totalProducts / itemsPerPage);
+
+  if (isLoading && products.length === 0) {
+    return (
+      <DashboardLayout>
+        <div className="flex-1 flex items-center justify-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full"
+          />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-slate-800 mb-2">مدیریت محصولات</h1>
+            <p className="text-slate-500">
+              مدیریت و ویرایش محصولات فروشگاه باسلام
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {isError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                <div>
+                  <p className="text-red-800 font-medium">خطا در دریافت اطلاعات</p>
+                  <p className="text-red-600 text-sm">{errorMessage}</p>
+                </div>
+              </div>
+              <button
+                onClick={fetchProducts}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                تلاش مجدد
+              </button>
+            </motion.div>
+          )}
+
+          {/* Toolbar */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+              {/* Search */}
+              <div className="relative flex-1 w-full md:w-auto">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="جستجو در محصولات..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1); // Reset to first page on search
+                  }}
+                  className="w-full pr-10 pl-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Filter */}
+              <div className="flex items-center gap-2">
+                <Filter className="w-5 h-5 text-slate-500" />
+                <select
+                  value={filterStatus}
+                  onChange={(e) => {
+                    setFilterStatus(e.target.value as any);
+                    setCurrentPage(1); // Reset to first page on filter change
+                  }}
+                  className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                  <option value="all">همه محصولات</option>
+                  <option value="active">فعال</option>
+                  <option value="inactive">غیرفعال</option>
+                </select>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                <button className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  <span className="hidden sm:inline">افزودن محصول</span>
+                </button>
+                {selectedProducts.length > 0 && (
+                  <button 
+                    onClick={handleBulkEdit}
+                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span>ویرایش ({selectedProducts.length})</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Products Table */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3 text-right">
+                      <button
+                        onClick={toggleSelectAll}
+                        className="flex items-center justify-center"
+                        disabled={products.length === 0}
+                      >
+                        {products.length > 0 && selectedProducts.length === products.length ? (
+                          <CheckSquare className="w-5 h-5 text-orange-500" />
+                        ) : (
+                          <Square className="w-5 h-5 text-slate-400" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-slate-700">
+                      محصول
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-slate-700">
+                      قیمت
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-slate-700">
+                      موجودی
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-slate-700">
+                      دسته‌بندی
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-slate-700">
+                      وضعیت
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-slate-700">
+                      آخرین تغییر
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-slate-700">
+                      عملیات
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-12 text-center">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-8 h-8 border-4 border-orange-200 border-t-orange-500 rounded-full mx-auto"
+                        />
+                      </td>
+                    </tr>
+                  ) : products.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
+                        محصولی یافت نشد
+                      </td>
+                    </tr>
+                  ) : (
+                    products.map((product) => (
+                      <motion.tr
+                        key={product.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={cn(
+                          "hover:bg-slate-50 transition-colors",
+                          selectedProducts.includes(product.id) && "bg-orange-50"
+                        )}
+                      >
+                        <td className="px-4 py-4">
+                          <button
+                            onClick={() => toggleProductSelection(product.id)}
+                            className="flex items-center justify-center"
+                          >
+                            {selectedProducts.includes(product.id) ? (
+                              <CheckSquare className="w-5 h-5 text-orange-500" />
+                            ) : (
+                              <Square className="w-5 h-5 text-slate-400" />
+                            )}
+                          </button>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
+                              {product.image ? (
+                                <img 
+                                  src={product.image} 
+                                  alt={product.name}
+                                  className="w-full h-full object-cover rounded-lg"
+                                />
+                              ) : (
+                                <Package className="w-6 h-6 text-slate-400" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-800">{product.name}</div>
+                              <div className="text-xs text-slate-500">ID: {product.id}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-1 text-slate-800">
+                            <DollarSign className="w-4 h-4 text-orange-500" />
+                            {formatPrice(product.price)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={cn(
+                            "px-2 py-1 rounded-full text-xs font-medium",
+                            product.stock > 0 
+                              ? "bg-green-100 text-green-700" 
+                              : "bg-red-100 text-red-700"
+                          )}>
+                            {product.stock > 0 ? `${product.stock} عدد` : "ناموجود"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-slate-600 text-sm">
+                          {product.category}
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={cn(
+                            "px-2 py-1 rounded-full text-xs font-medium",
+                            product.status === "active"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-slate-100 text-slate-700"
+                          )}>
+                            {product.status === "active" ? "فعال" : "غیرفعال"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-slate-600 text-sm">
+                          {product.lastModified}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-2">
+                            <button className="p-2 text-slate-600 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors">
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button className="p-2 text-slate-600 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="px-4 py-4 border-t border-slate-200 flex items-center justify-between">
+                <div className="text-sm text-slate-600">
+                  نمایش {((currentPage - 1) * itemsPerPage) + 1} تا {Math.min(currentPage * itemsPerPage, totalProducts)} از {totalProducts} محصول
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={cn(
+                          "px-3 py-1 rounded-lg text-sm",
+                          currentPage === page
+                            ? "bg-orange-500 text-white"
+                            : "text-slate-600 hover:bg-slate-100"
+                        )}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+            {[
+              { 
+                label: "کل محصولات", 
+                value: totalProducts, 
+                icon: Package, 
+                color: "orange" 
+              },
+              { 
+                label: "محصولات فعال", 
+                value: products.filter(p => p.status === "active").length, 
+                icon: CheckSquare, 
+                color: "green" 
+              },
+              { 
+                label: "موجود در انبار", 
+                value: products.filter(p => p.stock > 0).length, 
+                icon: FileText, 
+                color: "blue" 
+              },
+              { 
+                label: "انتخاب شده", 
+                value: selectedProducts.length, 
+                icon: CheckSquare, 
+                color: "orange" 
+              },
+            ].map((stat, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="bg-white rounded-xl p-4 border border-slate-200"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <stat.icon className={cn(
+                    "w-6 h-6",
+                    stat.color === "orange" && "text-orange-500",
+                    stat.color === "green" && "text-green-500",
+                    stat.color === "blue" && "text-blue-500"
+                  )} />
+                  <span className="text-2xl font-bold text-slate-800">{stat.value}</span>
+                </div>
+                <p className="text-sm text-slate-500">{stat.label}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </main>
+    </DashboardLayout>
+  );
+}

@@ -2,7 +2,7 @@
 
 export const AUTH_COOKIE_NAME = "peyvandyar_token";
 
-export const BASALAM_SSO_URL = "https://basalam.com/accounts/sso?client_id=1119&scope=vendor.product.read%20vendor.product.write%20customer.profile.read&redirect_uri=https://peyvandyar.amintvk.ir/api/webhook/oauth&state=amintvk";
+export const BASALAM_SSO_URL = "https://basalam.com/accounts/sso?client_id=1119&scope=vendor.profile.read%20vendor.product.write%20customer.profile.read&redirect_uri=https://peyvandyar.amintvk.ir/api/webhook/oauth&state=amin";
 
 /**
  * Get auth token from cookies (client-side)
