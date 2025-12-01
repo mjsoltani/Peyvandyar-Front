@@ -8,6 +8,12 @@ interface ApiResponse<T> {
   data?: T;
   message?: string;
   error?: string;
+  pagination?: {
+    current_page?: number;
+    per_page?: number;
+    total?: number;
+    last_page?: number;
+  };
 }
 
 async function apiRequest<T>(
