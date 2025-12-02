@@ -1,9 +1,39 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
 
-// استفاده از system font برای جلوگیری از مشکل در build time
-// در صورت نیاز می‌توانید فونت Vazirmatn را از Google Fonts استفاده کنید
-// اما برای build در Docker، از system font استفاده می‌کنیم
+// تعریف فونت ایران‌سنس با وزن‌های مختلف
+const iranSans = localFont({
+  src: [
+    {
+      path: "../fonts/IRANSansWeb_UltraLight.ttf",
+      weight: "200",
+      style: "normal",
+    },
+    {
+      path: "../fonts/IRANSansWeb_Light.ttf",
+      weight: "300",
+      style: "normal",
+    },
+    {
+      path: "../fonts/IRANSansWeb.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../fonts/IRANSansWeb_Medium.ttf",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../fonts/IRANSansWeb_Bold.ttf",
+      weight: "700",
+      style: "normal",
+    },
+  ],
+  variable: "--font-iran-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "پیوندیار | ویرایش انبوه محصولات باسلام",
@@ -16,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fa" dir="rtl">
+    <html lang="fa" dir="rtl" className={iranSans.variable}>
       <body className="font-sans antialiased">
         {children}
       </body>
