@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAuthToken } from "@/lib/auth";
-import { productsApi } from "@/lib/api";
+import { productsApi, userApi } from "@/lib/api";
 import { motion } from "framer-motion";
 import { 
   Package, 
@@ -11,7 +11,9 @@ import {
   BarChart3,
   Image as ImageIcon,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  User,
+  Store
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import Link from "next/link";
@@ -23,11 +25,20 @@ interface DashboardStats {
   pendingProducts: number;
 }
 
+interface UserInfo {
+  username: string;
+  basalam_user_id: number;
+  basalam_vendor_id: number;
+  vendor_title: string;
+  last_used_at: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     totalProducts: 0,
     activeProducts: 0,
@@ -40,26 +51,47 @@ export default function DashboardPage() {
       setIsLoading(true);
       setIsError(false);
       
-      // دریافت آمار از API
-      // طبق API-ENDPOINTS.json باید از /api/products با per_page استفاده کنیم
-      const response = await productsApi.getProducts({ page: 1, per_page: 1 });
+      // دریافت اطلاعات کاربر و آمار محصولات به صورت موازی
+      const [userResponse, productsResponse] = await Promise.all([
+        userApi.getProfile(),
+        productsApi.getProducts({ page: 1, per_page: 100 })
+      ]);
       
-      if (response.success) {
-        // طبق API-ENDPOINTS.json ساختار response این است:
-        // response.pagination.total برای تعداد کل
-        const totalProducts = response.pagination?.total || response.data?.pagination?.total || 0;
-        
-        // TODO: باید endpoint های جداگانه برای stats اضافه بشه
-        // فعلاً با مقادیر صفر نمایش می‌دیم
-        setStats({
-          totalProducts,
-          activeProducts: 0, // باید از API گرفته بشه
-          editedProducts: 0, // باید از API گرفته بشه
-          pendingProducts: 0, // باید از API گرفته بشه
+      // بررسی response کاربر
+      if (userResponse.success && userResponse.user) {
+        setUserInfo({
+          username: userResponse.user.username || "",
+          basalam_user_id: userResponse.user.basalam_user_id || 0,
+          basalam_vendor_id: userResponse.user.basalam_vendor_id || 0,
+          vendor_title: userResponse.user.vendor_title || "",
+          last_used_at: userResponse.user.last_used_at || "",
         });
-      } else {
-        throw new Error(response.message || "خطا در دریافت اطلاعات");
       }
+      
+      // بررسی response محصولات
+      if (!productsResponse.success) {
+        throw new Error(productsResponse.message || "خطا در دریافت اطلاعات");
+      }
+      
+      const totalProducts = productsResponse.pagination?.total || 0;
+      const productsData = productsResponse.data?.data || [];
+      
+      // محاسبه محصولات آماده ویرایش (status "در دسترس")
+      const activeProducts = productsData.filter((p: any) => 
+        p.status?.name === "در دسترس"
+      ).length;
+      
+      // اگر تعداد کل بیشتر از 100 است، محاسبه تقریبی
+      const activeProductsCount = totalProducts > 100
+        ? Math.round((activeProducts / productsData.length) * totalProducts)
+        : activeProducts;
+      
+      setStats({
+        totalProducts,
+        activeProducts: activeProductsCount,
+        editedProducts: 0, // نیاز به endpoint جداگانه یا track در frontend
+        pendingProducts: 0, // نیاز به endpoint جداگانه
+      });
     } catch (error: any) {
       console.error("Error fetching dashboard stats:", error);
       setIsError(true);
@@ -105,10 +137,37 @@ export default function DashboardPage() {
         >
           {/* Welcome Section */}
           <div className="bg-gradient-to-l from-orange-500 to-orange-600 rounded-2xl p-6 md:p-8 text-white mb-8">
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">خوش آمدید به پیوندیار!</h1>
-            <p className="text-orange-100">
-              از اینجا می‌توانید محصولات فروشگاه باسلام خود را مدیریت کنید.
-            </p>
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold mb-2">
+                  خوش آمدید {userInfo?.username ? `${userInfo.username}` : "به پیوندیار"}!
+                </h1>
+                {userInfo?.vendor_title && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <Store className="w-5 h-5 text-orange-100" />
+                    <p className="text-lg font-medium text-orange-50">
+                      {userInfo.vendor_title}
+                    </p>
+                  </div>
+                )}
+                <p className="text-orange-100">
+                  از اینجا می‌توانید محصولات فروشگاه باسلام خود را مدیریت کنید.
+                </p>
+              </div>
+              {userInfo && (
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                      <User className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-orange-100">شناسه فروشگاه</p>
+                      <p className="text-lg font-bold">{userInfo.basalam_vendor_id}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Error Message */}
