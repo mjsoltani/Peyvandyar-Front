@@ -36,7 +36,6 @@ async function apiRequest<T>(
     "Content-Type": "application/json",
     "Accept": "*/*",
     "X-Encrypted-Token": token,
-    "x-encrypted-token": token, // برای سازگاری با case-insensitive headers
   };
 
   // Merge کردن headers به صورت صحیح
