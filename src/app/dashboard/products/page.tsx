@@ -91,7 +91,8 @@ export default function ProductsPage() {
         const mappedProducts = productsData.map((p: any) => ({
           id: p.id,
           name: p.title || "بدون نام",
-          price: p.price || 0, // طبق response واقعی، فیلد price است نه primary_price
+          // تبدیل ریال به تومان (تقسیم بر 10) - API قیمت را به ریال می‌دهد
+          price: p.price ? Math.round(p.price / 10) : 0,
           stock: p.inventory || 0,
           photo: getProductPhoto(p), // فقط از product.photo استفاده می‌کنیم
           category: p.unit_type?.name || "بدون دسته", // استفاده از unit_type.name

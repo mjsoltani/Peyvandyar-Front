@@ -116,6 +116,56 @@ async function apiRequest<T>(
   }
 }
 
+// Helper function برای تبدیل قیمت از تومان به ریال (برای ارسال به API)
+const convertPriceToRial = (data: any): any => {
+  if (Array.isArray(data)) {
+    return data.map(item => convertPriceToRial(item));
+  }
+  
+  if (data && typeof data === 'object') {
+    const converted = { ...data };
+    
+    // تبدیل فیلدهای قیمت از تومان به ریال (ضرب در 10)
+    if ('price' in converted && typeof converted.price === 'number') {
+      converted.price = converted.price * 10;
+    }
+    if ('primary_price' in converted && typeof converted.primary_price === 'number') {
+      converted.primary_price = converted.primary_price * 10;
+    }
+    
+    // اگر products یک آرایه است، هر محصول را تبدیل کن
+    if ('products' in converted && Array.isArray(converted.products)) {
+      converted.products = converted.products.map((product: any) => {
+        const productCopy = { ...product };
+        if ('price' in productCopy && typeof productCopy.price === 'number') {
+          productCopy.price = productCopy.price * 10;
+        }
+        if ('primary_price' in productCopy && typeof productCopy.primary_price === 'number') {
+          productCopy.primary_price = productCopy.primary_price * 10;
+        }
+        // اگر variants وجود دارد
+        if ('variants' in productCopy && Array.isArray(productCopy.variants)) {
+          productCopy.variants = productCopy.variants.map((variant: any) => {
+            const variantCopy = { ...variant };
+            if ('price' in variantCopy && typeof variantCopy.price === 'number') {
+              variantCopy.price = variantCopy.price * 10;
+            }
+            if ('primary_price' in variantCopy && typeof variantCopy.primary_price === 'number') {
+              variantCopy.primary_price = variantCopy.primary_price * 10;
+            }
+            return variantCopy;
+          });
+        }
+        return productCopy;
+      });
+    }
+    
+    return converted;
+  }
+  
+  return data;
+};
+
 // Products API
 export const productsApi = {
   /**
@@ -156,9 +206,11 @@ export const productsApi = {
    * ویرایش محصول
    */
   updateProduct: async (id: number, data: any) => {
+    // تبدیل قیمت از تومان به ریال قبل از ارسال
+    const convertedData = convertPriceToRial(data);
     return apiRequest<any>(`/products/${id}`, {
       method: "PATCH", // طبق API-ENDPOINTS.json باید PATCH باشد
-      body: JSON.stringify(data),
+      body: JSON.stringify(convertedData),
     });
   },
 
@@ -166,12 +218,12 @@ export const productsApi = {
    * ویرایش انبوه محصولات
    */
   bulkUpdateProducts: async (products: Array<{ id: number; [key: string]: any }>) => {
+    // تبدیل قیمت از تومان به ریال قبل از ارسال
+    const convertedProducts = convertPriceToRial({ products });
     // طبق API-ENDPOINTS.json باید آرایه products ارسال شود
     return apiRequest<any>("/products/batch-update", {
       method: "PATCH", // طبق API-ENDPOINTS.json باید PATCH باشد
-      body: JSON.stringify({
-        products,
-      }),
+      body: JSON.stringify(convertedProducts),
     });
   },
 
