@@ -94,7 +94,7 @@ export function IntegrationSection() {
       transition: {
         duration: 0.8,
         delay: 0.2 + i * 0.15,
-        ease: [0.25, 0.4, 0.25, 1],
+        ease: "easeOut" as const,
       },
     }),
   };
