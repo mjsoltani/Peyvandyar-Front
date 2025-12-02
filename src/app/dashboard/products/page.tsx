@@ -30,10 +30,13 @@ interface Product {
   name: string;
   price: number;
   stock: number;
-  image?: string;
+  photo?: string;
   category: string;
   status: "active" | "inactive";
   lastModified: string;
+  sku?: string;
+  unitType?: string;
+  preparationDay?: number;
 }
 
 export default function ProductsPage() {
@@ -62,29 +65,49 @@ export default function ProductsPage() {
         status: filterStatus,
       });
 
-      if (response.success && response.data) {
-        // طبق API-ENDPOINTS.json ساختار response این است:
+      // Debug: نمایش response برای بررسی ساختار
+      console.log("Products API Response:", response);
+
+      if (response.success) {
+        // ساختار واقعی response از API:
         // response.data.data (آرایه محصولات)
         // response.pagination.total (تعداد کل)
         const productsData = response.data?.data || [];
-        const total = response.pagination?.total || response.data?.pagination?.total || 0;
+        const total = response.pagination?.total || 0;
         
-        // تبدیل ساختار API به ساختار مورد نیاز کامپوننت
+        // تابع برای استخراج URL تصویر از response (طبق ساختار واقعی API)
+        const getProductPhoto = (product: any): string | undefined => {
+          // طبق response واقعی، تصویر فقط در product.photo است
+          if (product.photo) {
+            // استفاده از md (medium) برای نمایش در لیست
+            // اگر md نبود، از sm یا xs استفاده کن
+            return product.photo.md || product.photo.sm || product.photo.xs || product.photo.original || product.photo.lg;
+          }
+          
+          return undefined;
+        };
+        
+        // تبدیل ساختار API به ساختار مورد نیاز کامپوننت (طبق response واقعی)
         const mappedProducts = productsData.map((p: any) => ({
           id: p.id,
-          name: p.title || p.name || "بدون نام",
-          price: p.primary_price || p.price || 0,
-          stock: p.inventory || p.stock || 0,
-          image: p.image || p.primary_image,
-          category: p.category || "بدون دسته",
-          status: p.status || "active",
-          lastModified: p.updated_at || p.last_modified || "نامشخص",
+          name: p.title || "بدون نام",
+          price: p.price || 0, // طبق response واقعی، فیلد price است نه primary_price
+          stock: p.inventory || 0,
+          photo: getProductPhoto(p), // فقط از product.photo استفاده می‌کنیم
+          category: p.unit_type?.name || "بدون دسته", // استفاده از unit_type.name
+          status: p.status?.name === "در دسترس" ? "active" : "inactive", // استفاده از status.name
+          lastModified: p.published || "نامشخص",
+          sku: p.sku,
+          unitType: p.unit_type?.name,
+          preparationDay: p.preparation_day,
         }));
+        
+        console.log("Mapped Products:", mappedProducts);
         
         setProducts(mappedProducts);
         setTotalProducts(total);
       } else {
-        throw new Error(response.message || "خطا در دریافت محصولات");
+        throw new Error(response.message || response.error || "خطا در دریافت محصولات");
       }
     } catch (error: any) {
       console.error("Error fetching products:", error);
@@ -132,6 +155,22 @@ export default function ProductsPage() {
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("fa-IR").format(price) + " تومان";
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString || dateString === "نامشخص") return "نامشخص";
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat("fa-IR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
+    } catch {
+      return dateString;
+    }
   };
 
   const totalPages = Math.ceil(totalProducts / itemsPerPage);
@@ -324,12 +363,25 @@ export default function ProductsPage() {
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                              {product.image ? (
+                            <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden">
+                              {product.photo ? (
                                 <img 
-                                  src={product.image} 
+                                  src={product.photo} 
                                   alt={product.name}
                                   className="w-full h-full object-cover rounded-lg"
+                                  onError={(e) => {
+                                    // اگر تصویر لود نشد، fallback به icon
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    const parent = target.parentElement;
+                                    if (parent && !parent.querySelector('.fallback-icon')) {
+                                      const icon = document.createElement('div');
+                                      icon.className = 'fallback-icon';
+                                      icon.innerHTML = '<svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
+                                      parent.appendChild(icon);
+                                    }
+                                  }}
+                                  loading="lazy"
                                 />
                               ) : (
                                 <Package className="w-6 h-6 text-slate-400" />
@@ -371,7 +423,7 @@ export default function ProductsPage() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-slate-600 text-sm">
-                          {product.lastModified}
+                          {formatDate(product.lastModified)}
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
