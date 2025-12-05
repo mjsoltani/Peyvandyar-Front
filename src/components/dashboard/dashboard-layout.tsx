@@ -12,6 +12,8 @@ import {
   LogOut,
   FileText,
   BarChart3,
+  Shield,
+  Copy,
 } from "lucide-react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import Link from "next/link";
@@ -123,10 +125,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       ),
     },
     {
-      label: "گزارش‌ها",
-      href: "/dashboard/reports",
+      label: "کپی محصول",
+      href: "/dashboard/copy-product",
       icon: (
-        <BarChart3 className="text-slate-700 h-5 w-5 flex-shrink-0" />
+        <Copy className="text-slate-700 h-5 w-5 flex-shrink-0" />
+      ),
+    },
+    {
+      label: "پنل ادمین",
+      href: "/dashboard/admin",
+      icon: (
+        <Shield className="text-orange-600 h-5 w-5 flex-shrink-0" />
       ),
     },
     {

@@ -16,19 +16,30 @@ interface ApiResponse<T> {
   };
 }
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public statusCode?: number,
+    public isAuthError: boolean = false
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   // چک کردن که در client-side هستیم
   if (typeof window === "undefined") {
-    throw new Error("API requests can only be made from client-side");
+    throw new ApiError("API requests can only be made from client-side");
   }
 
   const token = getAuthToken();
   
   if (!token) {
-    throw new Error("Authentication required");
+    throw new ApiError("Authentication required", 401, true);
   }
 
   // ساخت headers با merge صحیح
@@ -78,6 +89,8 @@ async function apiRequest<T>(
 
     if (!response.ok) {
       let errorMessage = `HTTP error! status: ${response.status}`;
+      const isAuthError = response.status === 401 || response.status === 403;
+      
       try {
         const errorData = await response.json();
         errorMessage = errorData.message || errorData.error || errorMessage;
@@ -85,7 +98,13 @@ async function apiRequest<T>(
         // اگر response JSON نبود، از status text استفاده کن
         errorMessage = response.statusText || errorMessage;
       }
-      throw new Error(errorMessage);
+      
+      // برای خطاهای احراز هویت، پیغام مناسب‌تر
+      if (isAuthError) {
+        errorMessage = "دسترسی غیرمجاز - لطفا مجددا وارد شوید";
+      }
+      
+      throw new ApiError(errorMessage, response.status, isAuthError);
     }
 
     // چک کردن که response خالی نباشد
@@ -233,6 +252,27 @@ export const productsApi = {
   deleteProduct: async (id: number) => {
     return apiRequest<any>(`/products/${id}`, { method: "DELETE" });
   },
+
+  /**
+   * کپی محصول
+   */
+  copyProduct: async (id: number) => {
+    return apiRequest<any>(`/products/${id}/copy`, { method: "POST" });
+  },
+
+  /**
+   * دریافت اطلاعات محصول از باسلام (برای پیش‌نمایش)
+   */
+  getProductFromBasalam: async (productId: string | number) => {
+    return apiRequest<any>(`/product/${productId}`, { method: "GET" });
+  },
+
+  /**
+   * کپی محصول از باسلام (بعد از تایید کاربر)
+   */
+  copyProductFromBasalam: async (productId: string | number) => {
+    return apiRequest<any>(`/product/${productId}/copy`, { method: "POST" });
+  },
 };
 
 // User/Profile API
@@ -249,6 +289,122 @@ export const userApi = {
    */
   getUserInfo: async () => {
     return apiRequest<any>("/user", { method: "GET" });
+  },
+};
+
+// Admin API (نیاز به admin authentication)
+export const adminApi = {
+  /**
+   * دریافت لیست تمام کاربران
+   */
+  getAllUsers: async () => {
+    // این endpoint نیاز به auth ندارد طبق API-ENDPOINTS.json
+    const response = await fetch(`${API_BASE_URL}/users`);
+    if (!response.ok) {
+      throw new Error("Failed to fetch users");
+    }
+    return response.json();
+  },
+
+  /**
+   * دریافت توکن‌های در انتظار تایید
+   */
+  getPendingTokens: async () => {
+    const response = await fetch(`${API_BASE_URL}/tokens/pending`);
+    if (!response.ok) {
+      throw new Error("Failed to fetch pending tokens");
+    }
+    return response.json();
+  },
+
+  /**
+   * تایید توکن
+   */
+  approveToken: async (tokenId: number, approvedBy: string) => {
+    const response = await fetch(`${API_BASE_URL}/tokens/${tokenId}/approve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ approved_by: approvedBy }),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to approve token");
+    }
+    return response.json();
+  },
+
+  /**
+   * رد کردن توکن
+   */
+  rejectToken: async (tokenId: number) => {
+    const response = await fetch(`${API_BASE_URL}/tokens/${tokenId}/reject`, {
+      method: "POST",
+    });
+    if (!response.ok) {
+      throw new Error("Failed to reject token");
+    }
+    return response.json();
+  },
+
+  /**
+   * ذخیره توکن به صورت دستی
+   */
+  setToken: async (token: string, username: string) => {
+    const response = await fetch(`${API_BASE_URL}/token/set`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ token, username }),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to set token");
+    }
+    return response.json();
+  },
+
+  /**
+   * دریافت اطلاعات توکن
+   */
+  getTokenInfo: async (username: string) => {
+    const response = await fetch(
+      `${API_BASE_URL}/token/info?username=${encodeURIComponent(username)}`
+    );
+    if (!response.ok) {
+      throw new Error("Failed to fetch token info");
+    }
+    return response.json();
+  },
+
+  /**
+   * حذف توکن کاربر
+   */
+  deleteToken: async (username: string) => {
+    const response = await fetch(`${API_BASE_URL}/token/delete`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username }),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to delete token");
+    }
+    return response.json();
+  },
+
+  /**
+   * دریافت توکن decrypt شده کاربر
+   */
+  getAuthToken: async (username: string) => {
+    const response = await fetch(
+      `${API_BASE_URL}/auth/token?username=${encodeURIComponent(username)}`
+    );
+    if (!response.ok) {
+      throw new Error("Failed to fetch auth token");
+    }
+    return response.json();
   },
 };
 

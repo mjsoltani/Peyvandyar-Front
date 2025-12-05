@@ -23,6 +23,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { ApiSectionWrapper } from "@/components/dashboard/api-error-boundary";
 import { cn } from "@/lib/utils";
 
 interface Product {
@@ -176,20 +177,6 @@ export default function ProductsPage() {
 
   const totalPages = Math.ceil(totalProducts / itemsPerPage);
 
-  if (isLoading && products.length === 0) {
-    return (
-      <DashboardLayout>
-        <div className="flex-1 flex items-center justify-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full"
-          />
-        </div>
-      </DashboardLayout>
-    );
-  }
-
   return (
     <DashboardLayout>
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
@@ -202,29 +189,12 @@ export default function ProductsPage() {
             </p>
           </div>
 
-          {/* Error Message */}
-          {isError && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500" />
-                <div>
-                  <p className="text-red-800 font-medium">خطا در دریافت اطلاعات</p>
-                  <p className="text-red-600 text-sm">{errorMessage}</p>
-                </div>
-              </div>
-              <button
-                onClick={fetchProducts}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
-              >
-                <RefreshCw className="w-4 h-4" />
-                تلاش مجدد
-              </button>
-            </motion.div>
-          )}
+          <ApiSectionWrapper
+            error={isError ? new Error(errorMessage) : null}
+            isLoading={isLoading && products.length === 0}
+            onRetry={fetchProducts}
+            errorTitle="خطا در دریافت محصولات"
+          >
 
           {/* Toolbar */}
           <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
@@ -484,6 +454,8 @@ export default function ProductsPage() {
               </div>
             )}
           </div>
+
+          </ApiSectionWrapper>
 
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
