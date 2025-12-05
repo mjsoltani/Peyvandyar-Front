@@ -34,6 +34,7 @@ interface Product {
 
 interface BulkEditForm {
   price?: number;
+  priceType?: "fixed" | "percent"; // نوع تغییر قیمت
   stock?: number;
   status?: "active" | "inactive";
   category?: string;
@@ -58,6 +59,7 @@ export default function BulkEditPage() {
   // فرم ویرایش انبوه
   const [bulkForm, setBulkForm] = useState<BulkEditForm>({
     price: undefined,
+    priceType: "fixed",
     stock: undefined,
     status: undefined,
     category: undefined,
@@ -86,11 +88,12 @@ export default function BulkEditPage() {
         const mappedProducts = productsData.map((p: any) => ({
           id: p.id,
           name: p.title || p.name || "بدون نام",
-          price: p.primary_price || p.price || 0,
+          price: p.primary_price ? Math.round(p.primary_price / 10) : (p.price || 0), // تبدیل ریال به تومان
           stock: p.inventory || p.stock || 0,
-          image: p.image || p.primary_image,
-          category: p.category || "بدون دسته",
-          status: p.status || "active",
+          image: p.photo?.sm || p.photo?.xs || p.photo?.md || p.image || p.primary_image, // استخراج تصویر از photo object
+          category: p.category?.title || p.unit_type?.name || p.category || "بدون دسته",
+          status: p.status?.name === "در دسترس" ? "active" : "inactive",
+          variants: p.variants || [], // ذخیره variants برای استفاده بعدی
         }));
 
         setProducts(mappedProducts);
@@ -171,18 +174,48 @@ export default function BulkEditPage() {
         const product = products.find((p) => p.id === productId);
         const updatePayload: any = { id: productId };
         
-        // اضافه کردن فیلدهای مورد نیاز برای API
+        // محاسبه قیمت براساس نوع (ثابت یا درصدی)
         if (updateData.price !== undefined) {
-          updatePayload.primary_price = updateData.price;
+          let newPrice = updateData.price;
+          
+          if (bulkForm.priceType === "percent" && product) {
+            // محاسبه قیمت جدید براساس درصد
+            const percentChange = updateData.price;
+            newPrice = Math.round(product.price * (1 + percentChange / 100));
+          }
+          
+          // تبدیل تومان به ریال (ضرب در 10)
+          updatePayload.primary_price = newPrice * 10;
         }
+        
         if (updateData.stock !== undefined) {
           updatePayload.stock = updateData.stock;
         }
-        if (updateData.status) {
-          updatePayload.status = updateData.status;
-        }
-        if (updateData.category) {
-          updatePayload.category = updateData.category;
+        
+        // اگر variants داشت، اونها رو هم اضافه کن
+        if (product && (product as any).variants && (product as any).variants.length > 0) {
+          updatePayload.variants = (product as any).variants.map((variant: any) => {
+            const variantUpdate: any = { id: variant.id };
+            
+            // اگر قیمت تغییر کرد، variants رو هم آپدیت کن
+            if (updateData.price !== undefined && variant.primary_price) {
+              let variantPrice = updateData.price;
+              
+              if (bulkForm.priceType === "percent") {
+                const variantPriceInToman = Math.round(variant.primary_price / 10);
+                variantPrice = Math.round(variantPriceInToman * (1 + updateData.price / 100));
+              }
+              
+              variantUpdate.primary_price = variantPrice * 10;
+            }
+            
+            // اگر موجودی تغییر کرد، variants رو هم آپدیت کن
+            if (updateData.stock !== undefined) {
+              variantUpdate.stock = updateData.stock;
+            }
+            
+            return variantUpdate;
+          });
         }
         
         return updatePayload;
@@ -313,11 +346,44 @@ export default function BulkEditPage() {
                   {/* قیمت */}
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
-                      قیمت جدید (تومان)
+                      تغییر قیمت
                     </label>
+                    
+                    {/* انتخاب نوع تغییر */}
+                    <div className="flex gap-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => setBulkForm({ ...bulkForm, priceType: "fixed" })}
+                        className={cn(
+                          "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                          bulkForm.priceType === "fixed"
+                            ? "bg-orange-500 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        )}
+                      >
+                        قیمت ثابت
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBulkForm({ ...bulkForm, priceType: "percent" })}
+                        className={cn(
+                          "flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                          bulkForm.priceType === "percent"
+                            ? "bg-orange-500 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        )}
+                      >
+                        درصد تغییر
+                      </button>
+                    </div>
+                    
                     <input
                       type="number"
-                      placeholder="مثال: 150000"
+                      placeholder={
+                        bulkForm.priceType === "percent"
+                          ? "مثال: 10 (افزایش 10%) یا -10 (کاهش 10%)"
+                          : "مثال: 150000"
+                      }
                       value={bulkForm.price || ""}
                       onChange={(e) =>
                         setBulkForm({
@@ -328,7 +394,9 @@ export default function BulkEditPage() {
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                     <p className="text-xs text-slate-400 mt-1">
-                      خالی بگذارید تا تغییر نکند
+                      {bulkForm.priceType === "percent"
+                        ? "عدد مثبت برای افزایش، منفی برای کاهش"
+                        : "قیمت جدید به تومان"}
                     </p>
                   </div>
 

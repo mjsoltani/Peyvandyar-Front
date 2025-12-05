@@ -233,7 +233,10 @@ export default function ProductsPage() {
 
               {/* Actions */}
               <div className="flex items-center gap-2">
-                <button className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2">
+                <button 
+                  onClick={() => router.push("/dashboard/copy-product")}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
+                >
                   <Upload className="w-4 h-4" />
                   <span className="hidden sm:inline">افزودن محصول</span>
                 </button>
