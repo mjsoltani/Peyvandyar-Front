@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { removeAuthToken } from "@/lib/auth";
-import { currencyApi } from "@/lib/api";
 import { motion } from "framer-motion";
 import { 
   LayoutDashboard, 
@@ -12,15 +11,10 @@ import {
   Headphones,
   LogOut,
   FileText,
-  BarChart3,
   Shield,
   Copy,
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
 } from "lucide-react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
-import { ShimmerButton } from "@/components/ui/shimmer-button";
 import Link from "next/link";
 
 // لوگوی پیوندیار
@@ -101,28 +95,6 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [usdRate, setUsdRate] = useState<number | null>(null);
-  const [isLoadingRate, setIsLoadingRate] = useState(true);
-
-  useEffect(() => {
-    fetchUsdRate();
-    // به‌روزرسانی هر 5 دقیقه
-    const interval = setInterval(fetchUsdRate, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchUsdRate = async () => {
-    try {
-      const response = await currencyApi.getUsdRate();
-      if (response.success && response.rate) {
-        setUsdRate(response.rate);
-      }
-    } catch (error) {
-      console.error("Error fetching USD rate:", error);
-    } finally {
-      setIsLoadingRate(false);
-    }
-  };
 
   const handleLogout = () => {
     removeAuthToken();
@@ -214,46 +186,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col min-w-0">
-        {/* USD Rate Button - Fixed Position */}
-        <div className="fixed bottom-6 right-6 z-50">
-          {isLoadingRate ? (
-            <div className="bg-white rounded-xl shadow-lg px-4 py-3 flex items-center gap-2 border border-slate-200">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full"
-              />
-              <span className="text-sm text-slate-600">در حال بارگذاری...</span>
-            </div>
-          ) : usdRate ? (
-            <ShimmerButton
-              className="shadow-xl"
-              background="linear-gradient(135deg, rgba(249, 115, 22, 0.95) 0%, rgba(234, 88, 12, 0.95) 100%)"
-              shimmerColor="#ffffff"
-              shimmerSize="0.1em"
-              shimmerDuration="2.5s"
-              borderRadius="12px"
-            >
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                <div className="flex flex-col items-start">
-                  <span className="text-xs opacity-90">نرخ دلار</span>
-                  <span className="font-bold text-base tracking-wide" dir="ltr">
-                    {new Intl.NumberFormat("fa-IR").format(usdRate)} تومان
-                  </span>
-                </div>
-              </div>
-            </ShimmerButton>
-          ) : (
-            <div className="bg-white rounded-xl shadow-lg px-4 py-3 border border-slate-200">
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-500">در دسترس نیست</span>
-              </div>
-            </div>
-          )}
-        </div>
-        
         {children}
       </div>
     </div>

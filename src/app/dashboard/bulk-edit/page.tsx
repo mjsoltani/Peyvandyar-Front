@@ -93,7 +93,7 @@ export default function BulkEditPage() {
           image: p.photo?.sm || p.photo?.xs || p.photo?.md || p.image || p.primary_image, // استخراج تصویر از photo object
           category: p.category?.title || p.unit_type?.name || p.category || "بدون دسته",
           status: p.status?.name === "در دسترس" ? "active" : "inactive",
-          variants: p.variants || [], // ذخیره variants برای استفاده بعدی
+          variant: p.variant || [], // ذخیره variant (نه variants) برای استفاده بعدی
         }));
 
         setProducts(mappedProducts);
@@ -174,21 +174,23 @@ export default function BulkEditPage() {
         const product = products.find((p) => p.id === productId);
         const updatePayload: any = { id: productId };
         
-        const hasVariants = product && (product as any).variants && (product as any).variants.length > 0;
+        const hasVariants = product && (product as any).variant && (product as any).variant.length > 0;
         
-        // اگر محصول variants داره
+        // اگر محصول variant داره
         if (hasVariants) {
           // فقط variants رو آپدیت کن (طبق schema)
-          updatePayload.variants = (product as any).variants.map((variant: any) => {
-            const variantUpdate: any = { id: variant.id };
+          updatePayload.variants = (product as any).variant.map((v: any) => {
+            const variantUpdate: any = { id: v.id };
             
             // اگر قیمت تغییر کرد
-            if (updateData.price !== undefined && variant.primary_price) {
+            if (updateData.price !== undefined) {
               let variantPrice = updateData.price;
               
-              if (bulkForm.priceType === "percent") {
-                const variantPriceInToman = Math.round(variant.primary_price / 10);
-                variantPrice = Math.round(variantPriceInToman * (1 + updateData.price / 100));
+              // استخراج قیمت فعلی variant (primary_price یا price)
+              const currentPrice = v.primary_price ? Math.round(v.primary_price / 10) : (v.price ? Math.round(v.price / 10) : 0);
+              
+              if (bulkForm.priceType === "percent" && currentPrice > 0) {
+                variantPrice = Math.round(currentPrice * (1 + updateData.price / 100));
               }
               
               variantUpdate.primary_price = variantPrice * 10;
@@ -202,7 +204,7 @@ export default function BulkEditPage() {
             return variantUpdate;
           });
         } else {
-          // اگر محصول variants نداره، primary_price و stock محصول اصلی رو آپدیت کن
+          // اگر محصول variant نداره، primary_price و stock محصول اصلی رو آپدیت کن
           
           // محاسبه قیمت براساس نوع (ثابت یا درصدی)
           if (updateData.price !== undefined) {
