@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { removeAuthToken } from "@/lib/auth";
+import { currencyApi } from "@/lib/api";
 import { motion } from "framer-motion";
 import { 
   LayoutDashboard, 
@@ -14,6 +15,9 @@ import {
   BarChart3,
   Shield,
   Copy,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import Link from "next/link";
@@ -96,6 +100,28 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [usdRate, setUsdRate] = useState<number | null>(null);
+  const [isLoadingRate, setIsLoadingRate] = useState(true);
+
+  useEffect(() => {
+    fetchUsdRate();
+    // به‌روزرسانی هر 5 دقیقه
+    const interval = setInterval(fetchUsdRate, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchUsdRate = async () => {
+    try {
+      const response = await currencyApi.getUsdRate();
+      if (response.success && response.rate) {
+        setUsdRate(response.rate);
+      }
+    } catch (error) {
+      console.error("Error fetching USD rate:", error);
+    } finally {
+      setIsLoadingRate(false);
+    }
+  };
 
   const handleLogout = () => {
     removeAuthToken();
@@ -187,6 +213,35 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col min-w-0">
+        {/* USD Rate Header */}
+        <div className="bg-gradient-to-l from-green-500 to-green-600 text-white px-4 py-2 shadow-md">
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5" />
+              <span className="font-medium text-sm">نرخ دلار امروز:</span>
+            </div>
+            {isLoadingRate ? (
+              <div className="flex items-center gap-2">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                />
+                <span className="text-sm">در حال بارگذاری...</span>
+              </div>
+            ) : usdRate ? (
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-lg" dir="ltr">
+                  {new Intl.NumberFormat("fa-IR").format(usdRate)} تومان
+                </span>
+                <TrendingUp className="w-4 h-4" />
+              </div>
+            ) : (
+              <span className="text-sm text-green-100">در دسترس نیست</span>
+            )}
+          </div>
+        </div>
+        
         {children}
       </div>
     </div>

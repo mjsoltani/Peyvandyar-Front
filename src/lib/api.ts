@@ -292,6 +292,25 @@ export const userApi = {
   },
 };
 
+// Currency API
+export const currencyApi = {
+  /**
+   * دریافت نرخ دلار روز
+   */
+  getUsdRate: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/currency/usd`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch USD rate");
+      }
+      return response.json();
+    } catch (error) {
+      console.error("Error fetching USD rate:", error);
+      return { success: false, rate: null };
+    }
+  },
+};
+
 // Admin API (نیاز به admin authentication)
 export const adminApi = {
   /**
