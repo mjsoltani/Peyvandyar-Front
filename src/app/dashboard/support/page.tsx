@@ -11,6 +11,7 @@ import {
   Send,
   AlertCircle,
   CheckCircle,
+  Phone,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { cn } from "@/lib/utils";
@@ -120,25 +121,28 @@ export default function SupportPage() {
             </motion.div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {/* Contact Cards */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-xl border border-slate-200 p-6"
+              className="bg-white rounded-xl border border-slate-200 p-6 hover:border-orange-300 hover:shadow-lg transition-all"
             >
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-4">
-                <Mail className="w-6 h-6 text-orange-500" />
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                <MessageSquare className="w-6 h-6 text-blue-500" />
               </div>
-              <h3 className="font-bold text-slate-800 mb-2">ایمیل</h3>
+              <h3 className="font-bold text-slate-800 mb-2">تلگرام</h3>
               <p className="text-slate-600 text-sm mb-4">
-                برای ارتباط از طریق ایمیل
+                پشتیبانی سریع از طریق تلگرام
               </p>
               <a
-                href="mailto:support@peyvandyar.com"
-                className="text-orange-500 hover:text-orange-600 font-medium"
+                href="https://t.me/mjsoltani2001"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-600 font-medium flex items-center gap-2"
               >
-                support@peyvandyar.com
+                <span dir="ltr">@mjsoltani2001</span>
+                <Send className="w-4 h-4" />
               </a>
             </motion.div>
 
@@ -146,10 +150,33 @@ export default function SupportPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-white rounded-xl border border-slate-200 p-6"
+              className="bg-white rounded-xl border border-slate-200 p-6 hover:border-orange-300 hover:shadow-lg transition-all"
+            >
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
+                <Phone className="w-6 h-6 text-green-500" />
+              </div>
+              <h3 className="font-bold text-slate-800 mb-2">تماس تلفنی</h3>
+              <p className="text-slate-600 text-sm mb-4">
+                تماس مستقیم با پشتیبانی
+              </p>
+              <a
+                href="tel:09162628099"
+                className="text-green-600 hover:text-green-700 font-bold flex items-center gap-2"
+                dir="ltr"
+              >
+                <Phone className="w-4 h-4" />
+                <span>09162628099</span>
+              </a>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white rounded-xl border border-slate-200 p-6 hover:border-orange-300 hover:shadow-lg transition-all"
             >
               <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-4">
-                <MessageSquare className="w-6 h-6 text-orange-500" />
+                <Mail className="w-6 h-6 text-orange-500" />
               </div>
               <h3 className="font-bold text-slate-800 mb-2">تیکت پشتیبانی</h3>
               <p className="text-slate-600 text-sm mb-4">
