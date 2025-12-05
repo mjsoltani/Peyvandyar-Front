@@ -303,7 +303,15 @@ export const currencyApi = {
       if (!response.ok) {
         throw new Error("Failed to fetch USD rate");
       }
-      return response.json();
+      const data = await response.json();
+      // استخراج قیمت از response
+      return { 
+        success: data.success !== false, 
+        rate: data.price || null,
+        title: data.title || "دلار",
+        change: data.change || 0,
+        changePercent: data.changePercent || 0
+      };
     } catch (error) {
       console.error("Error fetching USD rate:", error);
       return { success: false, rate: null };

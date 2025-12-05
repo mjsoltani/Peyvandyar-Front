@@ -54,7 +54,7 @@ export default function BulkEditPage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   
-  const itemsPerPage = 20;
+  const itemsPerPage = 100; // 100 محصول در هر صفحه
 
   // فرم ویرایش انبوه
   const [bulkForm, setBulkForm] = useState<BulkEditForm>({
@@ -664,11 +664,11 @@ export default function BulkEditPage() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="px-4 py-4 border-t border-slate-200 flex items-center justify-between">
+                  <div className="px-4 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="text-sm text-slate-600">
-                      نمایش {((currentPage - 1) * itemsPerPage) + 1} تا{" "}
-                      {Math.min(currentPage * itemsPerPage, totalProducts)} از{" "}
-                      {totalProducts} محصول
+                      نمایش {new Intl.NumberFormat("fa-IR").format(((currentPage - 1) * itemsPerPage) + 1)} تا{" "}
+                      {new Intl.NumberFormat("fa-IR").format(Math.min(currentPage * itemsPerPage, totalProducts))} از{" "}
+                      {new Intl.NumberFormat("fa-IR").format(totalProducts)} محصول
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -676,26 +676,63 @@ export default function BulkEditPage() {
                           setCurrentPage((prev) => Math.max(1, prev - 1))
                         }
                         disabled={currentPage === 1}
-                        className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
                       <div className="flex items-center gap-1">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                          (page) => (
+                        {/* نمایش صفحه اول */}
+                        {currentPage > 3 && (
+                          <>
+                            <button
+                              onClick={() => setCurrentPage(1)}
+                              className="px-3 py-1 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition-colors"
+                            >
+                              ۱
+                            </button>
+                            {currentPage > 4 && (
+                              <span className="px-2 text-slate-400">...</span>
+                            )}
+                          </>
+                        )}
+                        
+                        {/* صفحات اطراف صفحه فعلی */}
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter(page => 
+                            page === currentPage ||
+                            page === currentPage - 1 ||
+                            page === currentPage + 1 ||
+                            page === currentPage - 2 ||
+                            page === currentPage + 2
+                          )
+                          .map((page) => (
                             <button
                               key={page}
                               onClick={() => setCurrentPage(page)}
                               className={cn(
-                                "px-3 py-1 rounded-lg text-sm",
+                                "px-3 py-1 rounded-lg text-sm transition-colors",
                                 currentPage === page
-                                  ? "bg-orange-500 text-white"
+                                  ? "bg-orange-500 text-white font-bold"
                                   : "text-slate-600 hover:bg-slate-100"
                               )}
                             >
-                              {page}
+                              {new Intl.NumberFormat("fa-IR").format(page)}
                             </button>
-                          )
+                          ))}
+                        
+                        {/* نمایش صفحه آخر */}
+                        {currentPage < totalPages - 2 && (
+                          <>
+                            {currentPage < totalPages - 3 && (
+                              <span className="px-2 text-slate-400">...</span>
+                            )}
+                            <button
+                              onClick={() => setCurrentPage(totalPages)}
+                              className="px-3 py-1 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition-colors"
+                            >
+                              {new Intl.NumberFormat("fa-IR").format(totalPages)}
+                            </button>
+                          </>
                         )}
                       </div>
                       <button
@@ -703,7 +740,7 @@ export default function BulkEditPage() {
                           setCurrentPage((prev) => Math.min(totalPages, prev + 1))
                         }
                         disabled={currentPage === totalPages}
-                        className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </button>

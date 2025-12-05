@@ -20,6 +20,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
+import { ShimmerButton } from "@/components/ui/shimmer-button";
 import Link from "next/link";
 
 // لوگوی پیوندیار
@@ -214,30 +215,40 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content */}
       <div className="flex flex-1 flex-col min-w-0">
         {/* USD Rate Header */}
-        <div className="bg-gradient-to-l from-green-500 to-green-600 text-white px-4 py-2 shadow-md">
+        <div className="bg-gradient-to-l from-emerald-600 via-green-600 to-teal-600 px-4 py-3 shadow-lg">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5" />
-              <span className="font-medium text-sm">نرخ دلار امروز:</span>
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                <DollarSign className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-bold text-white text-base">نرخ دلار امروز</span>
             </div>
             {isLoadingRate ? (
               <div className="flex items-center gap-2">
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                  className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
                 />
-                <span className="text-sm">در حال بارگذاری...</span>
+                <span className="text-sm text-white/90">در حال بارگذاری...</span>
               </div>
             ) : usdRate ? (
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-lg" dir="ltr">
+              <ShimmerButton
+                className="shadow-lg"
+                background="linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%)"
+                shimmerColor="#ffffff"
+                shimmerSize="0.1em"
+                shimmerDuration="2s"
+                borderRadius="12px"
+              >
+                <span className="font-bold text-lg tracking-wide" dir="ltr">
                   {new Intl.NumberFormat("fa-IR").format(usdRate)} تومان
                 </span>
-                <TrendingUp className="w-4 h-4" />
-              </div>
+              </ShimmerButton>
             ) : (
-              <span className="text-sm text-green-100">در دسترس نیست</span>
+              <span className="text-sm text-white/70 bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm">
+                در دسترس نیست
+              </span>
             )}
           </div>
         </div>
