@@ -43,6 +43,7 @@ interface BulkEditForm {
 export default function BulkEditPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
@@ -65,9 +66,13 @@ export default function BulkEditPage() {
     category: undefined,
   });
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (append = false) => {
     try {
-      setIsLoading(true);
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+      }
       setIsError(false);
       setErrorMessage("");
 
@@ -78,25 +83,33 @@ export default function BulkEditPage() {
       });
 
       if (response.success && response.data) {
-        // طبق API-ENDPOINTS.json ساختار response این است:
-        // response.data.data (آرایه محصولات)
-        // response.pagination.total (تعداد کل)
         const productsData = response.data?.data || [];
         const total = response.pagination?.total || response.data?.pagination?.total || 0;
 
         // تبدیل ساختار API به ساختار مورد نیاز کامپوننت
-        const mappedProducts = productsData.map((p: any) => ({
-          id: p.id,
-          name: p.title || p.name || "بدون نام",
-          price: p.primary_price ? Math.round(p.primary_price / 10) : (p.price || 0), // تبدیل ریال به تومان
-          stock: p.inventory || p.stock || 0,
-          image: p.photo?.sm || p.photo?.xs || p.photo?.md || p.image || p.primary_image, // استخراج تصویر از photo object
-          category: p.category?.title || p.unit_type?.name || p.category || "بدون دسته",
-          status: p.status?.name === "در دسترس" ? "active" : "inactive",
-          variant: p.variant || [], // ذخیره variant (نه variants) برای استفاده بعدی
-        }));
+        const mappedProducts = productsData.map((p: any) => {
+          // قیمت از API به ریال میاد، باید به تومان تبدیلش کنیم
+          const priceInRial = p.price || p.primary_price || 0;
+          const priceInToman = Math.round(priceInRial / 10);
+          
+          return {
+            id: p.id,
+            name: p.title || p.name || "بدون نام",
+            price: priceInToman, // قیمت به تومان
+            stock: p.inventory || p.stock || 0,
+            image: p.photo?.sm || p.photo?.xs || p.photo?.md || p.image || p.primary_image,
+            category: p.category?.title || p.unit_type?.name || p.category || "بدون دسته",
+            status: p.status?.name === "در دسترس" ? "active" : "inactive",
+            variant: p.variant || [], // ذخیره variant برای استفاده بعدی
+          };
+        });
 
-        setProducts(mappedProducts);
+        // اگر append باشه، محصولات جدید رو به لیست اضافه کن
+        if (append) {
+          setProducts(prev => [...prev, ...mappedProducts]);
+        } else {
+          setProducts(mappedProducts);
+        }
         setTotalProducts(total);
       } else {
         throw new Error(response.message || "خطا در دریافت محصولات");
@@ -105,9 +118,12 @@ export default function BulkEditPage() {
       console.error("Error fetching products:", error);
       setIsError(true);
       setErrorMessage(error.message || "خطا در ارتباط با سرور");
-      setProducts([]);
+      if (!append) {
+        setProducts([]);
+      }
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
@@ -119,8 +135,20 @@ export default function BulkEditPage() {
       return;
     }
 
-    fetchProducts();
-  }, [router, currentPage, searchQuery]);
+    // اگر صفحه 1 هست یا search تغییر کرده، از اول لود کن
+    if (currentPage === 1) {
+      fetchProducts(false);
+    } else {
+      // اگر صفحه بعدی هست، append کن
+      fetchProducts(true);
+    }
+  }, [router, currentPage]);
+
+  // وقتی search تغییر کرد، صفحه رو ریست کن
+  useEffect(() => {
+    setCurrentPage(1);
+    setProducts([]);
+  }, [searchQuery]);
 
   const toggleProductSelection = (productId: number) => {
     setSelectedProducts((prev) =>
@@ -235,12 +263,15 @@ export default function BulkEditPage() {
         setSelectedProducts([]);
         setBulkForm({
           price: undefined,
+          priceType: "fixed",
           stock: undefined,
           status: undefined,
           category: undefined,
         });
-        // رفرش لیست محصولات
-        await fetchProducts();
+        // ریست کردن لیست و رفرش از صفحه 1
+        setCurrentPage(1);
+        setProducts([]);
+        await fetchProducts(false);
         // پاک کردن پیام موفقیت بعد از 3 ثانیه
         setTimeout(() => setSubmitSuccess(false), 3000);
       } else {
@@ -318,7 +349,7 @@ export default function BulkEditPage() {
               </div>
               {isError && (
                 <button
-                  onClick={fetchProducts}
+                  onClick={() => fetchProducts(false)}
                   className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
                 >
                   <RefreshCw className="w-4 h-4" />
@@ -669,91 +700,38 @@ export default function BulkEditPage() {
                   </table>
                 </div>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="px-4 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="text-sm text-slate-600">
-                      نمایش {new Intl.NumberFormat("fa-IR").format(((currentPage - 1) * itemsPerPage) + 1)} تا{" "}
-                      {new Intl.NumberFormat("fa-IR").format(Math.min(currentPage * itemsPerPage, totalProducts))} از{" "}
-                      {new Intl.NumberFormat("fa-IR").format(totalProducts)} محصول
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          setCurrentPage((prev) => Math.max(1, prev - 1))
-                        }
-                        disabled={currentPage === 1}
-                        className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                      <div className="flex items-center gap-1">
-                        {/* نمایش صفحه اول */}
-                        {currentPage > 3 && (
-                          <>
-                            <button
-                              onClick={() => setCurrentPage(1)}
-                              className="px-3 py-1 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition-colors"
-                            >
-                              ۱
-                            </button>
-                            {currentPage > 4 && (
-                              <span className="px-2 text-slate-400">...</span>
-                            )}
-                          </>
-                        )}
-                        
-                        {/* صفحات اطراف صفحه فعلی */}
-                        {Array.from({ length: totalPages }, (_, i) => i + 1)
-                          .filter(page => 
-                            page === currentPage ||
-                            page === currentPage - 1 ||
-                            page === currentPage + 1 ||
-                            page === currentPage - 2 ||
-                            page === currentPage + 2
-                          )
-                          .map((page) => (
-                            <button
-                              key={page}
-                              onClick={() => setCurrentPage(page)}
-                              className={cn(
-                                "px-3 py-1 rounded-lg text-sm transition-colors",
-                                currentPage === page
-                                  ? "bg-orange-500 text-white font-bold"
-                                  : "text-slate-600 hover:bg-slate-100"
-                              )}
-                            >
-                              {new Intl.NumberFormat("fa-IR").format(page)}
-                            </button>
-                          ))}
-                        
-                        {/* نمایش صفحه آخر */}
-                        {currentPage < totalPages - 2 && (
-                          <>
-                            {currentPage < totalPages - 3 && (
-                              <span className="px-2 text-slate-400">...</span>
-                            )}
-                            <button
-                              onClick={() => setCurrentPage(totalPages)}
-                              className="px-3 py-1 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition-colors"
-                            >
-                              {new Intl.NumberFormat("fa-IR").format(totalPages)}
-                            </button>
-                          </>
-                        )}
-                      </div>
-                      <button
-                        onClick={() =>
-                          setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                        }
-                        disabled={currentPage === totalPages}
-                        className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                    </div>
+                {/* Load More / Info */}
+                <div className="px-4 py-4 border-t border-slate-200 flex flex-col items-center gap-4">
+                  <div className="text-sm text-slate-600">
+                    نمایش {new Intl.NumberFormat("fa-IR").format(products.length)} از{" "}
+                    {new Intl.NumberFormat("fa-IR").format(totalProducts)} محصول
                   </div>
-                )}
+                  
+                  {products.length < totalProducts && (
+                    <button
+                      onClick={() => setCurrentPage(prev => prev + 1)}
+                      disabled={isLoadingMore}
+                      className={cn(
+                        "px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2",
+                        isLoadingMore
+                          ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                          : "bg-orange-500 text-white hover:bg-orange-600"
+                      )}
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>در حال بارگذاری...</span>
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-5 h-5" />
+                          <span>بارگذاری بیشتر</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
