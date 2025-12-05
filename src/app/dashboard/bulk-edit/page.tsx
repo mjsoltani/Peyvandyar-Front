@@ -169,35 +169,20 @@ export default function BulkEditPage() {
       setSubmitError(null);
       setSubmitSuccess(false);
 
-      // طبق API-ENDPOINTS.json باید آرایه products با ساختار خاص ارسال شود
+      // طبق Swagger schema باید آرایه products با ساختار خاص ارسال شود
       const productsToUpdate = selectedProducts.map((productId) => {
         const product = products.find((p) => p.id === productId);
         const updatePayload: any = { id: productId };
         
-        // محاسبه قیمت براساس نوع (ثابت یا درصدی)
-        if (updateData.price !== undefined) {
-          let newPrice = updateData.price;
-          
-          if (bulkForm.priceType === "percent" && product) {
-            // محاسبه قیمت جدید براساس درصد
-            const percentChange = updateData.price;
-            newPrice = Math.round(product.price * (1 + percentChange / 100));
-          }
-          
-          // تبدیل تومان به ریال (ضرب در 10)
-          updatePayload.primary_price = newPrice * 10;
-        }
+        const hasVariants = product && (product as any).variants && (product as any).variants.length > 0;
         
-        if (updateData.stock !== undefined) {
-          updatePayload.stock = updateData.stock;
-        }
-        
-        // اگر variants داشت، اونها رو هم اضافه کن
-        if (product && (product as any).variants && (product as any).variants.length > 0) {
+        // اگر محصول variants داره
+        if (hasVariants) {
+          // فقط variants رو آپدیت کن (طبق schema)
           updatePayload.variants = (product as any).variants.map((variant: any) => {
             const variantUpdate: any = { id: variant.id };
             
-            // اگر قیمت تغییر کرد، variants رو هم آپدیت کن
+            // اگر قیمت تغییر کرد
             if (updateData.price !== undefined && variant.primary_price) {
               let variantPrice = updateData.price;
               
@@ -209,13 +194,33 @@ export default function BulkEditPage() {
               variantUpdate.primary_price = variantPrice * 10;
             }
             
-            // اگر موجودی تغییر کرد، variants رو هم آپدیت کن
+            // اگر موجودی تغییر کرد
             if (updateData.stock !== undefined) {
               variantUpdate.stock = updateData.stock;
             }
             
             return variantUpdate;
           });
+        } else {
+          // اگر محصول variants نداره، primary_price و stock محصول اصلی رو آپدیت کن
+          
+          // محاسبه قیمت براساس نوع (ثابت یا درصدی)
+          if (updateData.price !== undefined) {
+            let newPrice = updateData.price;
+            
+            if (bulkForm.priceType === "percent" && product) {
+              // محاسبه قیمت جدید براساس درصد
+              const percentChange = updateData.price;
+              newPrice = Math.round(product.price * (1 + percentChange / 100));
+            }
+            
+            // تبدیل تومان به ریال (ضرب در 10)
+            updatePayload.primary_price = newPrice * 10;
+          }
+          
+          if (updateData.stock !== undefined) {
+            updatePayload.stock = updateData.stock;
+          }
         }
         
         return updatePayload;

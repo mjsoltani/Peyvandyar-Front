@@ -214,43 +214,44 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col min-w-0">
-        {/* USD Rate Header */}
-        <div className="bg-gradient-to-l from-emerald-600 via-green-600 to-teal-600 px-4 py-3 shadow-lg">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                <DollarSign className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-white text-base">نرخ دلار امروز</span>
+        {/* USD Rate Button - Fixed Position */}
+        <div className="fixed bottom-6 right-6 z-50">
+          {isLoadingRate ? (
+            <div className="bg-white rounded-xl shadow-lg px-4 py-3 flex items-center gap-2 border border-slate-200">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full"
+              />
+              <span className="text-sm text-slate-600">در حال بارگذاری...</span>
             </div>
-            {isLoadingRate ? (
+          ) : usdRate ? (
+            <ShimmerButton
+              className="shadow-xl"
+              background="linear-gradient(135deg, rgba(249, 115, 22, 0.95) 0%, rgba(234, 88, 12, 0.95) 100%)"
+              shimmerColor="#ffffff"
+              shimmerSize="0.1em"
+              shimmerDuration="2.5s"
+              borderRadius="12px"
+            >
               <div className="flex items-center gap-2">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                />
-                <span className="text-sm text-white/90">در حال بارگذاری...</span>
+                <DollarSign className="w-4 h-4" />
+                <div className="flex flex-col items-start">
+                  <span className="text-xs opacity-90">نرخ دلار</span>
+                  <span className="font-bold text-base tracking-wide" dir="ltr">
+                    {new Intl.NumberFormat("fa-IR").format(usdRate)} تومان
+                  </span>
+                </div>
               </div>
-            ) : usdRate ? (
-              <ShimmerButton
-                className="shadow-lg"
-                background="linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%)"
-                shimmerColor="#ffffff"
-                shimmerSize="0.1em"
-                shimmerDuration="2s"
-                borderRadius="12px"
-              >
-                <span className="font-bold text-lg tracking-wide" dir="ltr">
-                  {new Intl.NumberFormat("fa-IR").format(usdRate)} تومان
-                </span>
-              </ShimmerButton>
-            ) : (
-              <span className="text-sm text-white/70 bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm">
-                در دسترس نیست
-              </span>
-            )}
-          </div>
+            </ShimmerButton>
+          ) : (
+            <div className="bg-white rounded-xl shadow-lg px-4 py-3 border border-slate-200">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-slate-400" />
+                <span className="text-sm text-slate-500">در دسترس نیست</span>
+              </div>
+            </div>
+          )}
         </div>
         
         {children}
