@@ -332,10 +332,28 @@ export const adminApi = {
     if (params?.search) queryParams.append("search", params.search);
 
     const query = queryParams.toString();
-    return apiRequest<any>(
+    const response = await apiRequest<any>(
       `/admin/users${query ? `?${query}` : ""}`,
       { method: "GET" }
     );
+    
+    // تبدیل response format برای سازگاری
+    const responseData = response as any;
+    if (response.success && responseData.users) {
+      return {
+        success: true,
+        data: {
+          data: responseData.users
+        },
+        pagination: {
+          current_page: params?.page || 1,
+          per_page: params?.per_page || 50,
+          total: responseData.count || 0,
+          last_page: Math.ceil((responseData.count || 0) / (params?.per_page || 50))
+        }
+      };
+    }
+    return response;
   },
 
   /**

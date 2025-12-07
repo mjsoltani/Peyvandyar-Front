@@ -21,13 +21,15 @@ import {
 import { cn } from "@/lib/utils";
 
 interface User {
-  id?: number;
-  phone_number: string;
-  username?: string;
+  id: number;
+  username: string; // شماره تلفن
+  basalam_user_id: number;
+  basalam_vendor_id?: number;
   vendor_title?: string;
-  status?: string;
-  created_at?: string;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
+  token_count: string;
+  last_token_used?: string;
   [key: string]: any;
 }
 
@@ -63,8 +65,15 @@ export default function AdminUsersPage() {
       if (response.success && response.data) {
         const usersData = response.data?.data || [];
         const total = response.pagination?.total || 0;
-        setUsers(usersData);
-        setFilteredUsers(usersData);
+        
+        // تبدیل داده‌ها - username در API شماره تلفن هست
+        const mappedUsers = usersData.map((user: any) => ({
+          ...user,
+          phone_number: user.username, // username = phone_number
+        }));
+        
+        setUsers(mappedUsers);
+        setFilteredUsers(mappedUsers);
         setTotalUsers(total);
       }
     } catch (error) {
@@ -85,7 +94,7 @@ export default function AdminUsersPage() {
       await adminApi.activateUser(phoneNumber);
       setSuccessMessage(`کاربر "${phoneNumber}" با موفقیت فعال شد`);
       setTimeout(() => setSuccessMessage(""), 3000);
-      fetchUsers();
+      setCurrentPage(1); // بازگشت به صفحه اول
     } catch (error) {
       console.error("Error activating user:", error);
       setErrorMessage("خطا در فعال کردن کاربر");
@@ -105,7 +114,7 @@ export default function AdminUsersPage() {
       await adminApi.deactivateUser(phoneNumber);
       setSuccessMessage(`کاربر "${phoneNumber}" با موفقیت غیرفعال شد`);
       setTimeout(() => setSuccessMessage(""), 3000);
-      fetchUsers();
+      setCurrentPage(1); // بازگشت به صفحه اول
     } catch (error) {
       console.error("Error deactivating user:", error);
       setErrorMessage("خطا در غیرفعال کردن کاربر");
@@ -228,10 +237,10 @@ export default function AdminUsersPage() {
                           شماره تلفن
                         </th>
                         <th className="px-6 py-4 text-right text-sm font-medium text-slate-700">
-                          نام کاربری
+                          فروشگاه
                         </th>
                         <th className="px-6 py-4 text-right text-sm font-medium text-slate-700">
-                          وضعیت
+                          توکن
                         </th>
                         <th className="px-6 py-4 text-right text-sm font-medium text-slate-700">
                           تاریخ ایجاد
@@ -244,7 +253,7 @@ export default function AdminUsersPage() {
                     <tbody className="divide-y divide-slate-200">
                       {filteredUsers.map((user, index) => (
                         <motion.tr
-                          key={user.phone_number}
+                          key={user.id}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.05 }}
@@ -256,20 +265,23 @@ export default function AdminUsersPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-slate-700">
-                              {user.username || "—"}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <Store className="w-4 h-4 text-slate-400" />
+                              <span className="text-slate-700">
+                                {user.vendor_title || "—"}
+                              </span>
+                            </div>
                           </td>
                           <td className="px-6 py-4">
                             <span
                               className={cn(
                                 "inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium",
-                                user.status === "active"
+                                parseInt(user.token_count) > 0
                                   ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
+                                  : "bg-slate-100 text-slate-600"
                               )}
                             >
-                              {user.status === "active" ? "فعال" : "غیرفعال"}
+                              {user.token_count}
                             </span>
                           </td>
                           <td className="px-6 py-4">
@@ -280,7 +292,7 @@ export default function AdminUsersPage() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
-                              {user.status === "active" ? (
+                              {parseInt(user.token_count) > 0 ? (
                                 <button
                                   onClick={() => handleDeactivateUser(user.phone_number)}
                                   disabled={actioningPhone === user.phone_number}

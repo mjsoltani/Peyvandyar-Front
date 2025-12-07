@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getAuthToken } from "@/lib/auth";
 import { productsApi } from "@/lib/api";
@@ -42,6 +42,7 @@ interface BulkEditForm {
 
 export default function BulkEditPage() {
   const router = useRouter();
+  const tableEndRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -149,6 +150,31 @@ export default function BulkEditPage() {
     setCurrentPage(1);
     setProducts([]);
   }, [searchQuery]);
+
+  // Infinite scroll - وقتی کاربر به پایین رسید
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore && !isLoading) {
+          // چک کن که هنوز محصول بیشتری هست
+          if (products.length < totalProducts) {
+            setCurrentPage((prev) => prev + 1);
+          }
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (tableEndRef.current) {
+      observer.observe(tableEndRef.current);
+    }
+
+    return () => {
+      if (tableEndRef.current) {
+        observer.unobserve(tableEndRef.current);
+      }
+    };
+  }, [isLoadingMore, isLoading, products.length, totalProducts]);
 
   const toggleProductSelection = (productId: number) => {
     setSelectedProducts((prev) =>
@@ -731,6 +757,9 @@ export default function BulkEditPage() {
                       )}
                     </button>
                   )}
+                  
+                  {/* Infinite scroll trigger */}
+                  <div ref={tableEndRef} className="h-1" />
                 </div>
               </div>
             </div>
