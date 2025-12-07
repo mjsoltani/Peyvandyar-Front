@@ -20,7 +20,7 @@ interface AuthGuardProps {
 export function AuthGuard({
   children,
   requireAuth = true,
-  requireActive = false,
+  requireActive = true, // به طور پیش‌فرض active بودن رو چک می‌کنیم
 }: AuthGuardProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -47,17 +47,17 @@ export function AuthGuard({
         // اگر requireActive true است، باید user status رو چک کنیم
         if (requireActive) {
           try {
-            const userResponse = await userApi.getProfile();
+            const statusResponse = await userApi.getUserStatus();
             
-            if (!userResponse.success) {
+            if (!statusResponse.success) {
               router.push("/pricing");
               return;
             }
 
-            const user = (userResponse as any).user;
+            const user = (statusResponse as any).user;
             
-            // اگر user token_count 0 است (inactive)
-            if (user && user.token_count === 0) {
+            // اگر user is_active false است
+            if (user && user.is_active === false) {
               router.push("/pricing");
               return;
             }
@@ -65,6 +65,7 @@ export function AuthGuard({
             setIsAuthorized(true);
           } catch (error) {
             console.error("Error checking user status:", error);
+            // اگر خطا بود، به pricing redirect کن (برای امنیت)
             router.push("/pricing");
             return;
           }

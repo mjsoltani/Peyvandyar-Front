@@ -290,6 +290,14 @@ export const userApi = {
   getUserInfo: async () => {
     return apiRequest<any>("/user", { method: "GET" });
   },
+
+  /**
+   * دریافت وضعیت کاربر (فعال/غیرفعال)
+   * GET /api/user/status
+   */
+  getUserStatus: async () => {
+    return apiRequest<any>("/user/status", { method: "GET" });
+  },
 };
 
 // Currency API

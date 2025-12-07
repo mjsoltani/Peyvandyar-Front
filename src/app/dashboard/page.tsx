@@ -128,7 +128,7 @@ export default function DashboardPage() {
   }, [router]);
 
   return (
-    <AuthGuard requireAuth={true} requireActive={false}>
+    <AuthGuard requireAuth={true} requireActive={true}>
       <DashboardLayout>
         <main className="flex-1 p-4 md:p-8 overflow-y-auto">
           <motion.div
