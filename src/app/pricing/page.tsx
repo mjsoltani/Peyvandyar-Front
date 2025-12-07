@@ -18,7 +18,7 @@ const pricingPlans = [
     ],
     description: "برای شروع رایگان",
     buttonText: "شروع تست رایگان",
-    href: "https://basalam.com/chooneh-bread",
+    href: "https://basalam.com/choonehbread",
     isPopular: false,
   },
   {
@@ -35,7 +35,7 @@ const pricingPlans = [
     ],
     description: "برای کسب‌وکارهای در حال رشد",
     buttonText: "خرید پلن ماهیانه",
-    href: "https://basalam.com/chooneh-bread",
+    href: "https://basalam.com/choonehbread",
     isPopular: true,
   },
   {
@@ -53,7 +53,7 @@ const pricingPlans = [
     ],
     description: "برای سازمان‌های بزرگ",
     buttonText: "تماس برای فروش",
-    href: "https://basalam.com/chooneh-bread",
+    href: "https://basalam.com/choonehbread",
     isPopular: false,
   },
 ]
@@ -68,7 +68,7 @@ export default function PricingPage() {
             پیوندیار
           </Link>
           <Link
-            href="https://basalam.com/chooneh-bread"
+            href="https://basalam.com/choonehbread"
             className="flex items-center gap-2 text-orange-500 hover:text-orange-600 font-semibold"
           >
             بازگشت به فروشگاه
@@ -139,7 +139,7 @@ export default function PricingPage() {
             امروز شروع کنید و ۷ روز رایگان تست کنید. هیچ کارت اعتباری لازم نیست.
           </p>
           <Link
-            href="https://basalam.com/chooneh-bread"
+            href="https://basalam.com/choonehbread"
             className="inline-flex items-center gap-2 bg-orange-500 text-white px-8 py-3 rounded-xl font-semibold hover:bg-orange-600 transition-colors"
           >
             شروع تست رایگان
