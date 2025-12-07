@@ -323,14 +323,72 @@ export const currencyApi = {
 export const adminApi = {
   /**
    * دریافت لیست تمام کاربران
+   * GET /api/admin/users
    */
-  getAllUsers: async () => {
-    // این endpoint نیاز به auth ندارد طبق API-ENDPOINTS.json
-    const response = await fetch(`${API_BASE_URL}/users`);
-    if (!response.ok) {
-      throw new Error("Failed to fetch users");
-    }
-    return response.json();
+  getUsers: async (params?: { page?: number; per_page?: number; search?: string }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append("page", params.page.toString());
+    if (params?.per_page) queryParams.append("per_page", params.per_page.toString());
+    if (params?.search) queryParams.append("search", params.search);
+
+    const query = queryParams.toString();
+    return apiRequest<any>(
+      `/admin/users${query ? `?${query}` : ""}`,
+      { method: "GET" }
+    );
+  },
+
+  /**
+   * دریافت اطلاعات کاربر خاص
+   * GET /api/admin/users/{phone_number}
+   */
+  getUserByPhone: async (phoneNumber: string) => {
+    return apiRequest<any>(
+      `/admin/users/${encodeURIComponent(phoneNumber)}`,
+      { method: "GET" }
+    );
+  },
+
+  /**
+   * تغییر وضعیت کاربر
+   * PATCH /api/admin/users/update-status
+   */
+  updateUserStatus: async (phoneNumber: string, status: string) => {
+    return apiRequest<any>(
+      `/admin/users/update-status`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ phone_number: phoneNumber, status }),
+      }
+    );
+  },
+
+  /**
+   * فعال کردن کاربر
+   * POST /api/admin/users/activate
+   */
+  activateUser: async (phoneNumber: string) => {
+    return apiRequest<any>(
+      `/admin/users/activate`,
+      {
+        method: "POST",
+        body: JSON.stringify({ phone_number: phoneNumber }),
+      }
+    );
+  },
+
+  /**
+   * غیرفعال کردن کاربر
+   * POST /api/admin/users/deactivate
+   */
+  deactivateUser: async (phoneNumber: string) => {
+    return apiRequest<any>(
+      `/admin/users/deactivate`,
+      {
+        method: "POST",
+        body: JSON.stringify({ phone_number: phoneNumber }),
+      }
+    );
   },
 
   /**

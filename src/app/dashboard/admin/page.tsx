@@ -47,14 +47,14 @@ export default function AdminPage() {
     try {
       setIsLoading(true);
       const [usersResponse, pendingResponse] = await Promise.all([
-        adminApi.getAllUsers(),
+        adminApi.getUsers({ per_page: 1 }),
         adminApi.getPendingTokens(),
       ]);
 
       setStats({
-        totalUsers: usersResponse.count || 0,
+        totalUsers: usersResponse.pagination?.total || 0,
         pendingTokens: pendingResponse.count || 0,
-        activeUsers: usersResponse.users?.filter((u: any) => u.token_count > 0).length || 0,
+        activeUsers: usersResponse.data?.data?.filter((u: any) => u.status === "active").length || 0,
       });
     } catch (error) {
       console.error("Error fetching admin stats:", error);

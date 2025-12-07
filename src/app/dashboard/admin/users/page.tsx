@@ -14,16 +14,21 @@ import {
   Calendar,
   AlertCircle,
   CheckCircle,
+  Lock,
+  Unlock,
+  Loader2,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface User {
-  id: number;
-  username: string;
-  basalam_user_id: number;
-  basalam_vendor_id: number;
-  vendor_title: string;
-  token_count: number;
-  last_used_at?: string;
+  id?: number;
+  phone_number: string;
+  username?: string;
+  vendor_title?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: any;
 }
 
 export default function AdminUsersPage() {
@@ -31,36 +36,37 @@ export default function AdminUsersPage() {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [actioningPhone, setActioningPhone] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const itemsPerPage = 50;
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredUsers(users);
-    } else {
-      const query = searchQuery.toLowerCase();
-      setFilteredUsers(
-        users.filter(
-          (user) =>
-            user.username.toLowerCase().includes(query) ||
-            user.vendor_title.toLowerCase().includes(query) ||
-            user.basalam_vendor_id.toString().includes(query)
-        )
-      );
-    }
-  }, [searchQuery, users]);
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
-      const response = await adminApi.getAllUsers();
-      setUsers(response.users || []);
-      setFilteredUsers(response.users || []);
+      const response = await adminApi.getUsers({
+        page: currentPage,
+        per_page: itemsPerPage,
+        search: searchQuery || undefined,
+      });
+      
+      if (response.success && response.data) {
+        const usersData = response.data?.data || [];
+        const total = response.pagination?.total || 0;
+        setUsers(usersData);
+        setFilteredUsers(usersData);
+        setTotalUsers(total);
+      }
     } catch (error) {
       console.error("Error fetching users:", error);
       setErrorMessage("خطا در دریافت لیست کاربران");
@@ -69,23 +75,43 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleDeleteToken = async (username: string, userId: number) => {
-    if (!confirm(`آیا از حذف توکن کاربر "${username}" اطمینان دارید؟`)) {
+  const handleActivateUser = async (phoneNumber: string) => {
+    if (!confirm(`آیا از فعال کردن کاربر "${phoneNumber}" اطمینان دارید؟`)) {
       return;
     }
 
     try {
-      setDeletingUserId(userId);
-      await adminApi.deleteToken(username);
-      setSuccessMessage(`توکن کاربر "${username}" با موفقیت حذف شد`);
+      setActioningPhone(phoneNumber);
+      await adminApi.activateUser(phoneNumber);
+      setSuccessMessage(`کاربر "${phoneNumber}" با موفقیت فعال شد`);
       setTimeout(() => setSuccessMessage(""), 3000);
       fetchUsers();
     } catch (error) {
-      console.error("Error deleting token:", error);
-      setErrorMessage("خطا در حذف توکن");
+      console.error("Error activating user:", error);
+      setErrorMessage("خطا در فعال کردن کاربر");
       setTimeout(() => setErrorMessage(""), 3000);
     } finally {
-      setDeletingUserId(null);
+      setActioningPhone(null);
+    }
+  };
+
+  const handleDeactivateUser = async (phoneNumber: string) => {
+    if (!confirm(`آیا از غیرفعال کردن کاربر "${phoneNumber}" اطمینان دارید؟`)) {
+      return;
+    }
+
+    try {
+      setActioningPhone(phoneNumber);
+      await adminApi.deactivateUser(phoneNumber);
+      setSuccessMessage(`کاربر "${phoneNumber}" با موفقیت غیرفعال شد`);
+      setTimeout(() => setSuccessMessage(""), 3000);
+      fetchUsers();
+    } catch (error) {
+      console.error("Error deactivating user:", error);
+      setErrorMessage("خطا در غیرفعال کردن کاربر");
+      setTimeout(() => setErrorMessage(""), 3000);
+    } finally {
+      setActioningPhone(null);
     }
   };
 
@@ -125,12 +151,12 @@ export default function AdminUsersPage() {
                     مدیریت کاربران
                   </h1>
                   <p className="text-sm text-slate-500">
-                    {new Intl.NumberFormat("fa-IR").format(users.length)} کاربر
+                    {new Intl.NumberFormat("fa-IR").format(totalUsers)} کاربر
                   </p>
                 </div>
               </div>
               <button
-                onClick={fetchUsers}
+                onClick={() => fetchUsers()}
                 disabled={isLoading}
                 className="px-4 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-all disabled:opacity-50 flex items-center gap-2"
               >
@@ -170,7 +196,7 @@ export default function AdminUsersPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="جستجو بر اساس نام، فروشگاه یا شناسه..."
+                  placeholder="جستجو بر اساس شماره تلفن یا نام..."
                   className="w-full pr-11 pl-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
@@ -199,19 +225,16 @@ export default function AdminUsersPage() {
                     <thead className="bg-slate-50 border-b border-slate-200">
                       <tr>
                         <th className="px-6 py-4 text-right text-sm font-medium text-slate-700">
+                          شماره تلفن
+                        </th>
+                        <th className="px-6 py-4 text-right text-sm font-medium text-slate-700">
                           نام کاربری
                         </th>
                         <th className="px-6 py-4 text-right text-sm font-medium text-slate-700">
-                          فروشگاه
+                          وضعیت
                         </th>
                         <th className="px-6 py-4 text-right text-sm font-medium text-slate-700">
-                          شناسه فروشگاه
-                        </th>
-                        <th className="px-6 py-4 text-right text-sm font-medium text-slate-700">
-                          تعداد توکن
-                        </th>
-                        <th className="px-6 py-4 text-right text-sm font-medium text-slate-700">
-                          آخرین استفاده
+                          تاریخ ایجاد
                         </th>
                         <th className="px-6 py-4 text-right text-sm font-medium text-slate-700">
                           عملیات
@@ -221,72 +244,115 @@ export default function AdminUsersPage() {
                     <tbody className="divide-y divide-slate-200">
                       {filteredUsers.map((user, index) => (
                         <motion.tr
-                          key={user.id}
+                          key={user.phone_number}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.05 }}
                           className="hover:bg-slate-50 transition-colors"
                         >
                           <td className="px-6 py-4">
-                            <div className="font-medium text-slate-800">
-                              {user.username}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              ID: {user.basalam_user_id}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <Store className="w-4 h-4 text-slate-400" />
-                              <span className="text-slate-700">
-                                {user.vendor_title}
-                              </span>
+                            <div className="font-medium text-slate-800 dir-ltr">
+                              {user.phone_number}
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <span className="text-slate-700">
-                              {user.basalam_vendor_id}
+                              {user.username || "—"}
                             </span>
                           </td>
                           <td className="px-6 py-4">
                             <span
-                              className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${
-                                user.token_count > 0
+                              className={cn(
+                                "inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium",
+                                user.status === "active"
                                   ? "bg-green-100 text-green-700"
-                                  : "bg-slate-100 text-slate-600"
-                              }`}
+                                  : "bg-red-100 text-red-700"
+                              )}
                             >
-                              {user.token_count}
+                              {user.status === "active" ? "فعال" : "غیرفعال"}
                             </span>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2 text-sm text-slate-600">
                               <Calendar className="w-4 h-4 text-slate-400" />
-                              {formatDate(user.last_used_at)}
+                              {formatDate(user.created_at)}
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <button
-                              onClick={() => handleDeleteToken(user.username, user.id)}
-                              disabled={deletingUserId === user.id || user.token_count === 0}
-                              className="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
-                            >
-                              {deletingUserId === user.id ? (
-                                <motion.div
-                                  animate={{ rotate: 360 }}
-                                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                  className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full"
-                                />
+                            <div className="flex items-center gap-2">
+                              {user.status === "active" ? (
+                                <button
+                                  onClick={() => handleDeactivateUser(user.phone_number)}
+                                  disabled={actioningPhone === user.phone_number}
+                                  className={cn(
+                                    "px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-sm",
+                                    actioningPhone === user.phone_number
+                                      ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                                      : "bg-red-50 text-red-600 hover:bg-red-100"
+                                  )}
+                                >
+                                  {actioningPhone === user.phone_number ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Lock className="w-4 h-4" />
+                                  )}
+                                  غیرفعال
+                                </button>
                               ) : (
-                                <Trash2 className="w-4 h-4" />
+                                <button
+                                  onClick={() => handleActivateUser(user.phone_number)}
+                                  disabled={actioningPhone === user.phone_number}
+                                  className={cn(
+                                    "px-3 py-2 rounded-lg transition-all flex items-center gap-2 text-sm",
+                                    actioningPhone === user.phone_number
+                                      ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                                      : "bg-green-50 text-green-600 hover:bg-green-100"
+                                  )}
+                                >
+                                  {actioningPhone === user.phone_number ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Unlock className="w-4 h-4" />
+                                  )}
+                                  فعال
+                                </button>
                               )}
-                              حذف توکن
-                            </button>
+                            </div>
                           </td>
                         </motion.tr>
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {totalUsers > itemsPerPage && (
+                <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+                  <div className="text-sm text-slate-600">
+                    نمایش {new Intl.NumberFormat("fa-IR").format(((currentPage - 1) * itemsPerPage) + 1)} تا{" "}
+                    {new Intl.NumberFormat("fa-IR").format(Math.min(currentPage * itemsPerPage, totalUsers))} از{" "}
+                    {new Intl.NumberFormat("fa-IR").format(totalUsers)} کاربر
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      قبلی
+                    </button>
+                    <span className="px-3 py-2 text-sm text-slate-600">
+                      صفحه {new Intl.NumberFormat("fa-IR").format(currentPage)}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(prev => prev + 1)}
+                      disabled={currentPage * itemsPerPage >= totalUsers}
+                      className="px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      بعدی
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
