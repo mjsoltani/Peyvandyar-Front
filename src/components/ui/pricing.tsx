@@ -37,20 +37,17 @@ export function Pricing({
 }: PricingProps) {
   const [isMonthly, setIsMonthly] = useState(true)
   const isDesktop = useMediaQuery("(min-width: 768px)")
-  const switchRef = useRef<HTMLButtonElement>(null)
 
   const handleToggle = (checked: boolean) => {
     setIsMonthly(!checked)
-    if (checked && switchRef.current) {
-      const rect = switchRef.current.getBoundingClientRect()
-      const x = rect.left + rect.width / 2
-      const y = rect.top + rect.height / 2
+    if (checked) {
+      // Confetti animation when switching to yearly
       confetti({
         particleCount: 50,
         spread: 60,
         origin: {
-          x: x / window.innerWidth,
-          y: y / window.innerHeight,
+          x: 0.5,
+          y: 0.3,
         },
         colors: ["#ff5722", "#ff7043", "#ff9800", "#ffc107"],
         ticks: 200,
@@ -79,7 +76,6 @@ export function Pricing({
             ماهیانه
           </span>
           <Switch
-            ref={switchRef as any}
             checked={!isMonthly}
             onCheckedChange={handleToggle}
             className="relative"
