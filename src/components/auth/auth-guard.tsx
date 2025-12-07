@@ -20,7 +20,7 @@ interface AuthGuardProps {
 export function AuthGuard({
   children,
   requireAuth = true,
-  requireActive = false, // فعلا غیرفعال - فقط authenticated رو چک می‌کنیم
+  requireActive = true, // به طور پیش‌فرض active بودن رو چک می‌کنیم
 }: AuthGuardProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);

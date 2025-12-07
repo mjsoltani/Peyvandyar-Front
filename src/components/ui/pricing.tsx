@@ -60,34 +60,33 @@ export function Pricing({
   }
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-slate-800">
-            {title}
-          </h2>
-          <p className="text-sm sm:text-base lg:text-lg text-slate-500 whitespace-pre-line max-w-2xl mx-auto">
-            {description}
-          </p>
-        </div>
+    <div className="container py-20">
+      <div className="text-center space-y-4 mb-12">
+        <h2 className="text-4xl font-bold tracking-tight sm:text-5xl text-slate-800">
+          {title}
+        </h2>
+        <p className="text-slate-500 text-lg whitespace-pre-line">
+          {description}
+        </p>
+      </div>
 
-        <div className="flex justify-center mb-8 sm:mb-10">
-          <label className="relative inline-flex items-center cursor-pointer gap-2 sm:gap-3 flex-wrap justify-center">
-            <span className={cn("font-semibold text-sm sm:text-base", isMonthly ? "text-slate-800" : "text-slate-500")}>
-              ماهیانه
-            </span>
-            <Switch
-              checked={!isMonthly}
-              onCheckedChange={handleToggle}
-              className="relative"
-            />
-            <span className={cn("font-semibold text-sm sm:text-base", !isMonthly ? "text-slate-800" : "text-slate-500")}>
-              سالیانه <span className="text-orange-500 text-xs sm:text-sm">(۲۰% تخفیف)</span>
-            </span>
-          </label>
-        </div>
+      <div className="flex justify-center mb-10">
+        <label className="relative inline-flex items-center cursor-pointer gap-3">
+          <span className={cn("font-semibold", isMonthly ? "text-slate-800" : "text-slate-500")}>
+            ماهیانه
+          </span>
+          <Switch
+            checked={!isMonthly}
+            onCheckedChange={handleToggle}
+            className="relative"
+          />
+          <span className={cn("font-semibold", !isMonthly ? "text-slate-800" : "text-slate-500")}>
+            سالیانه <span className="text-orange-500">(۲۰% تخفیف)</span>
+          </span>
+        </label>
+      </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {plans.map((plan, index) => (
           <motion.div
             key={index}
@@ -99,65 +98,64 @@ export function Pricing({
               delay: index * 0.1,
             }}
             className={cn(
-              "rounded-xl sm:rounded-2xl border p-4 sm:p-6 lg:p-8 bg-white text-center flex flex-col relative transition-transform hover:scale-105",
+              "rounded-2xl border p-8 bg-white text-center flex flex-col relative",
               plan.isPopular
-                ? "border-orange-500 border-2 shadow-lg sm:shadow-xl"
+                ? "border-orange-500 border-2 shadow-xl"
                 : "border-slate-200 shadow-md"
             )}
           >
             {plan.isPopular && (
-              <div className="absolute top-0 right-0 bg-orange-500 text-white py-1 px-2 sm:px-3 rounded-bl-lg sm:rounded-bl-xl rounded-tr-lg sm:rounded-tr-xl flex items-center gap-1">
-                <Star className="h-3 w-3 sm:h-4 sm:w-4 fill-current" />
-                <span className="font-semibold text-xs sm:text-sm">محبوب</span>
+              <div className="absolute top-0 right-0 bg-orange-500 text-white py-1 px-3 rounded-bl-xl rounded-tr-xl flex items-center gap-1">
+                <Star className="h-4 w-4 fill-current" />
+                <span className="font-semibold text-sm">محبوب</span>
               </div>
             )}
 
             <div className="flex-1 flex flex-col">
-              <p className="text-sm sm:text-base font-semibold text-slate-600 mb-3 sm:mb-4">
+              <p className="text-base font-semibold text-slate-600 mb-4">
                 {plan.name}
               </p>
 
-              <div className="mt-4 sm:mt-6 flex items-center justify-center gap-x-1 sm:gap-x-2 mb-1 sm:mb-2">
-                <span className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-800">
+              <div className="mt-6 flex items-center justify-center gap-x-2 mb-2">
+                <span className="text-5xl font-bold text-slate-800">
                   {isMonthly ? plan.price : plan.yearlyPrice}
                 </span>
-                <span className="text-xs sm:text-sm font-semibold text-slate-500">
+                <span className="text-sm font-semibold text-slate-500">
                   هزار تومان
                 </span>
               </div>
 
-              <p className="text-xs text-slate-500 mb-4 sm:mb-6">
+              <p className="text-xs text-slate-500 mb-6">
                 {isMonthly ? "ماهیانه" : "سالیانه"}
               </p>
 
-              <ul className="mt-4 sm:mt-6 gap-2 sm:gap-3 flex flex-col mb-4 sm:mb-6">
+              <ul className="mt-6 gap-3 flex flex-col mb-6">
                 {plan.features.map((feature, idx) => (
-                  <li key={idx} className="flex items-start gap-2 sm:gap-3">
-                    <Check className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500 flex-shrink-0 mt-0.5" />
-                    <span className="text-left text-xs sm:text-sm text-slate-700">{feature}</span>
+                  <li key={idx} className="flex items-start gap-3">
+                    <Check className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                    <span className="text-left text-slate-700">{feature}</span>
                   </li>
                 ))}
               </ul>
 
-              <hr className="w-full my-4 sm:my-6" />
+              <hr className="w-full my-6" />
 
               <Link
                 href={plan.href}
                 className={cn(
-                  "w-full py-2 sm:py-3 px-4 sm:px-6 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 text-center text-sm sm:text-base",
+                  "w-full py-3 px-6 rounded-xl font-semibold transition-all duration-300 text-center",
                   plan.isPopular
-                    ? "bg-orange-500 text-white hover:bg-orange-600 active:scale-95"
-                    : "bg-slate-100 text-slate-800 hover:bg-slate-200 active:scale-95"
+                    ? "bg-orange-500 text-white hover:bg-orange-600"
+                    : "bg-slate-100 text-slate-800 hover:bg-slate-200"
                 )}
               >
                 {plan.buttonText}
               </Link>
 
-              <p className="mt-4 sm:mt-6 text-xs text-slate-500">{plan.description}</p>
+              <p className="mt-6 text-xs text-slate-500">{plan.description}</p>
             </div>
           </motion.div>
         ))}
-        </div>
       </div>
     </div>
   )
