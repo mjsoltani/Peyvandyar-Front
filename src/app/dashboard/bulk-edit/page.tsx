@@ -20,6 +20,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { AuthGuard } from "@/components/auth/auth-guard";
 import { cn } from "@/lib/utils";
 
 interface Product {
@@ -319,20 +320,23 @@ export default function BulkEditPage() {
 
   if (isLoading && products.length === 0) {
     return (
-      <DashboardLayout>
-        <div className="flex-1 flex items-center justify-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full"
-          />
-        </div>
-      </DashboardLayout>
+      <AuthGuard requireAuth={true}>
+        <DashboardLayout>
+          <div className="flex-1 flex items-center justify-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full"
+            />
+          </div>
+        </DashboardLayout>
+      </AuthGuard>
     );
   }
 
   return (
-    <DashboardLayout>
+    <AuthGuard requireAuth={true}>
+      <DashboardLayout>
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -767,6 +771,7 @@ export default function BulkEditPage() {
         </div>
       </main>
     </DashboardLayout>
+    </AuthGuard>
   );
 }
 

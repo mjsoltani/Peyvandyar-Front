@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { ApiSectionWrapper } from "@/components/dashboard/api-error-boundary";
+import { AuthGuard } from "@/components/auth/auth-guard";
 import Link from "next/link";
 
 interface DashboardStats {
@@ -127,14 +128,15 @@ export default function DashboardPage() {
   }, [router]);
 
   return (
-    <DashboardLayout>
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="max-w-7xl mx-auto"
-        >
+    <AuthGuard requireAuth={true} requireActive={false}>
+      <DashboardLayout>
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-7xl mx-auto"
+          >
           {/* Welcome Section */}
           <ApiSectionWrapper
             error={userError}
@@ -268,5 +270,6 @@ export default function DashboardPage() {
         </motion.div>
       </main>
     </DashboardLayout>
+    </AuthGuard>
   );
 }

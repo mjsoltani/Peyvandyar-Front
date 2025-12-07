@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { AuthGuard } from "@/components/auth/auth-guard";
 import { motion } from "framer-motion";
 import {
   Copy,
@@ -70,7 +71,8 @@ export default function CopyProductPage() {
   };
 
   return (
-    <DashboardLayout>
+    <AuthGuard requireAuth={true}>
+      <DashboardLayout>
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -159,6 +161,7 @@ export default function CopyProductPage() {
           </div>
         </motion.div>
       </main>
-    </DashboardLayout>
+      </DashboardLayout>
+    </AuthGuard>
   );
 }
