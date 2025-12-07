@@ -144,7 +144,7 @@ export default function BulkEditPage() {
       // اگر صفحه بعدی هست، append کن
       fetchProducts(true);
     }
-  }, [router, currentPage]);
+  }, [currentPage]);
 
   // وقتی search تغییر کرد، صفحه رو ریست کن
   useEffect(() => {
@@ -313,7 +313,8 @@ export default function BulkEditPage() {
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("fa-IR").format(price) + " تومان";
+    // قیمت به تومان است، فقط فرمت کن
+    return new Intl.NumberFormat("fa-IR").format(Math.round(price)) + " تومان";
   };
 
   const totalPages = Math.ceil(totalProducts / itemsPerPage);
@@ -446,19 +447,24 @@ export default function BulkEditPage() {
                     </div>
                     
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       placeholder={
                         bulkForm.priceType === "percent"
                           ? "مثال: 10 (افزایش 10%) یا -10 (کاهش 10%)"
                           : "مثال: 150000"
                       }
-                      value={bulkForm.price || ""}
-                      onChange={(e) =>
-                        setBulkForm({
-                          ...bulkForm,
-                          price: e.target.value ? Number(e.target.value) : undefined,
-                        })
-                      }
+                      value={bulkForm.price !== undefined ? bulkForm.price : ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // فقط اعداد و منفی رو قبول کن
+                        if (val === "" || val === "-" || /^-?\d+$/.test(val)) {
+                          setBulkForm({
+                            ...bulkForm,
+                            price: val ? Number(val) : undefined,
+                          });
+                        }
+                      }}
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                     <p className="text-xs text-slate-400 mt-1">
@@ -474,15 +480,20 @@ export default function BulkEditPage() {
                       موجودی جدید
                     </label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       placeholder="مثال: 100"
-                      value={bulkForm.stock || ""}
-                      onChange={(e) =>
-                        setBulkForm({
-                          ...bulkForm,
-                          stock: e.target.value ? Number(e.target.value) : undefined,
-                        })
-                      }
+                      value={bulkForm.stock !== undefined ? bulkForm.stock : ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // فقط اعداد مثبت رو قبول کن
+                        if (val === "" || /^\d+$/.test(val)) {
+                          setBulkForm({
+                            ...bulkForm,
+                            stock: val ? Number(val) : undefined,
+                          });
+                        }
+                      }}
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                     <p className="text-xs text-slate-400 mt-1">
