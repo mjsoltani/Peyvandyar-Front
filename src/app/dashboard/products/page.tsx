@@ -23,7 +23,6 @@ import {
   RefreshCw
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { AuthGuard } from "@/components/auth/auth-guard";
 import { ApiSectionWrapper } from "@/components/dashboard/api-error-boundary";
 import { cn } from "@/lib/utils";
 
@@ -179,8 +178,7 @@ export default function ProductsPage() {
   const totalPages = Math.ceil(totalProducts / itemsPerPage);
 
   return (
-    <AuthGuard requireAuth={true}>
-      <DashboardLayout>
+    <DashboardLayout>
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
@@ -512,7 +510,6 @@ export default function ProductsPage() {
           </div>
         </div>
       </main>
-      </DashboardLayout>
-    </AuthGuard>
+    </DashboardLayout>
   );
 }

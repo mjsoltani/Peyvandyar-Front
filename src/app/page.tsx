@@ -1,8 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { getAuthToken } from "@/lib/auth";
 import { HeroGeometric } from "@/components/ui/shape-landing-hero";
 import { IntegrationSection } from "@/components/ui/integration-section";
 import { FeaturesSectionWithHoverEffects } from "@/components/ui/feature-section-with-hover-effects";
@@ -19,16 +16,6 @@ const navItems = [
 ];
 
 export default function HomePage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // اگر کاربر authenticated است، به dashboard redirect کن
-    const token = getAuthToken();
-    if (token) {
-      router.push("/dashboard");
-    }
-  }, [router]);
-
   return (
     <main>
       <NavBar items={navItems} />

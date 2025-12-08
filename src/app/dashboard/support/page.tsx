@@ -14,7 +14,6 @@ import {
   Phone,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { AuthGuard } from "@/components/auth/auth-guard";
 import { cn } from "@/lib/utils";
 
 export default function SupportPage() {
@@ -70,8 +69,7 @@ export default function SupportPage() {
 
   if (isLoading) {
     return (
-      <AuthGuard requireAuth={true}>
-        <DashboardLayout>
+      <DashboardLayout>
         <div className="flex-1 flex items-center justify-center">
           <motion.div
             animate={{ rotate: 360 }}
@@ -80,13 +78,11 @@ export default function SupportPage() {
           />
         </div>
       </DashboardLayout>
-      </AuthGuard>
     );
   }
 
   return (
-    <AuthGuard requireAuth={true}>
-      <DashboardLayout>
+    <DashboardLayout>
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
@@ -266,8 +262,7 @@ export default function SupportPage() {
           </div>
         </div>
       </main>
-      </DashboardLayout>
-    </AuthGuard>
+    </DashboardLayout>
   );
 }
 
