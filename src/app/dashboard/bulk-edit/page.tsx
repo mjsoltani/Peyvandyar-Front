@@ -52,6 +52,7 @@ export default function BulkEditPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -86,6 +87,7 @@ export default function BulkEditPage() {
       if (response.success && response.data) {
         const productsData = response.data?.data || [];
         const total = response.pagination?.total || response.data?.pagination?.total || 0;
+        const totalPage = response.pagination?.total_page || response.data?.pagination?.total_page || 0;
 
         // تبدیل ساختار API به ساختار مورد نیاز کامپوننت
         const mappedProducts = productsData.map((p: any) => {
@@ -112,6 +114,7 @@ export default function BulkEditPage() {
           setProducts(mappedProducts);
         }
         setTotalProducts(total);
+        setTotalPages(totalPage);
       } else {
         throw new Error(response.message || "خطا در دریافت محصولات");
       }
@@ -156,8 +159,8 @@ export default function BulkEditPage() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !isLoadingMore && !isLoading) {
-          // چک کن که هنوز محصول بیشتری هست
-          if (products.length < totalProducts) {
+          // چک کن که صفحه فعلی از total_page کمتر است
+          if (currentPage < totalPages) {
             setCurrentPage((prev) => prev + 1);
           }
         }
@@ -174,7 +177,7 @@ export default function BulkEditPage() {
         observer.unobserve(tableEndRef.current);
       }
     };
-  }, [isLoadingMore, isLoading, products.length, totalProducts]);
+  }, [isLoadingMore, isLoading, currentPage, totalPages]);
 
   const toggleProductSelection = (productId: number) => {
     setSelectedProducts((prev) =>
@@ -315,8 +318,6 @@ export default function BulkEditPage() {
     // قیمت به تومان است، فقط فرمت کن
     return new Intl.NumberFormat("fa-IR").format(Math.round(price)) + " تومان";
   };
-
-  const totalPages = Math.ceil(totalProducts / itemsPerPage);
 
   if (isLoading && products.length === 0) {
     return (
@@ -742,9 +743,15 @@ export default function BulkEditPage() {
                   <div className="text-sm text-slate-600">
                     نمایش {new Intl.NumberFormat("fa-IR").format(products.length)} از{" "}
                     {new Intl.NumberFormat("fa-IR").format(totalProducts)} محصول
+                    {totalPages > 0 && (
+                      <span className="mr-2">
+                        (صفحه {new Intl.NumberFormat("fa-IR").format(currentPage)} از{" "}
+                        {new Intl.NumberFormat("fa-IR").format(totalPages)})
+                      </span>
+                    )}
                   </div>
                   
-                  {products.length < totalProducts && (
+                  {currentPage < totalPages && (
                     <button
                       onClick={() => setCurrentPage(prev => prev + 1)}
                       disabled={isLoadingMore}

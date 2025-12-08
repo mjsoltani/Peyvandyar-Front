@@ -13,6 +13,10 @@ interface ApiResponse<T> {
     per_page?: number;
     total?: number;
     last_page?: number;
+    page?: number;
+    total_page?: number;
+    total_count?: number;
+    result_count?: number;
   };
 }
 
