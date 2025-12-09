@@ -243,14 +243,15 @@ export default function BulkEditPage() {
             if (updateData.price !== undefined) {
               let variantPrice = updateData.price;
               
-              // استخراج قیمت فعلی variant (primary_price یا price)
+              // استخراج قیمت فعلی variant (primary_price یا price) - قیمت به تومان است
               const currentPrice = v.primary_price ? Math.round(v.primary_price / 10) : (v.price ? Math.round(v.price / 10) : 0);
               
               if (bulkForm.priceType === "percent" && currentPrice > 0) {
                 variantPrice = Math.round(currentPrice * (1 + updateData.price / 100));
               }
               
-              variantUpdate.primary_price = variantPrice * 10;
+              // convertPriceToRial سر ارسال خودش ضرب در 10 میکند، پس فقط تومان ارسال کن
+              variantUpdate.primary_price = variantPrice;
             }
             
             // اگر موجودی تغییر کرد
@@ -273,8 +274,8 @@ export default function BulkEditPage() {
               newPrice = Math.round(product.price * (1 + percentChange / 100));
             }
             
-            // تبدیل تومان به ریال (ضرب در 10)
-            updatePayload.primary_price = newPrice * 10;
+            // convertPriceToRial سر ارسال خودش ضرب در 10 میکند، پس فقط تومان ارسال کن
+            updatePayload.primary_price = newPrice;
           }
           
           if (updateData.stock !== undefined) {
@@ -411,7 +412,7 @@ export default function BulkEditPage() {
                 <div className="space-y-4">
                   {/* قیمت */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label htmlFor="price-input" className="block text-sm font-medium text-slate-700 mb-2">
                       تغییر قیمت
                     </label>
                     
@@ -444,12 +445,13 @@ export default function BulkEditPage() {
                     </div>
                     
                     <input
+                      id="price-input"
                       type="text"
                       inputMode="numeric"
                       placeholder={
                         bulkForm.priceType === "percent"
                           ? "مثال: 10 (افزایش 10%) یا -10 (کاهش 10%)"
-                          : "مثال: 150000"
+                          : "مثال: 13000 (نمایش: 130000 تومان)"
                       }
                       value={bulkForm.price !== undefined ? bulkForm.price : ""}
                       onChange={(e) => {
@@ -473,10 +475,11 @@ export default function BulkEditPage() {
 
                   {/* موجودی */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label htmlFor="stock-input" className="block text-sm font-medium text-slate-700 mb-2">
                       موجودی جدید
                     </label>
                     <input
+                      id="stock-input"
                       type="text"
                       inputMode="numeric"
                       placeholder="مثال: 100"
@@ -500,10 +503,11 @@ export default function BulkEditPage() {
 
                   {/* وضعیت */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label htmlFor="status-select" className="block text-sm font-medium text-slate-700 mb-2">
                       وضعیت
                     </label>
                     <select
+                      id="status-select"
                       value={bulkForm.status || ""}
                       onChange={(e) =>
                         setBulkForm({
@@ -523,10 +527,11 @@ export default function BulkEditPage() {
 
                   {/* دسته‌بندی */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label htmlFor="category-input" className="block text-sm font-medium text-slate-700 mb-2">
                       دسته‌بندی
                     </label>
                     <input
+                      id="category-input"
                       type="text"
                       placeholder="نام دسته‌بندی"
                       value={bulkForm.category || ""}
