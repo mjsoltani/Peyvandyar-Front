@@ -31,6 +31,21 @@ export function NavBar({ items, className }: NavBarProps) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, item: NavItem) => {
+    // اگر URL شامل # باشد (anchor link)
+    if (item.url.startsWith("#")) {
+      e.preventDefault();
+      setActiveTab(item.name);
+      
+      const element = document.querySelector(item.url);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    } else {
+      setActiveTab(item.name);
+    }
+  };
+
   return (
     <div
       dir="rtl"
@@ -48,7 +63,7 @@ export function NavBar({ items, className }: NavBarProps) {
             <Link
               key={item.name}
               href={item.url}
-              onClick={() => setActiveTab(item.name)}
+              onClick={(e) => handleNavClick(e, item)}
               className={cn(
                 "relative cursor-pointer text-sm font-semibold px-5 py-2 rounded-full transition-colors",
                 "text-slate-600 hover:text-orange-600",
