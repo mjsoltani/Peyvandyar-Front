@@ -7,7 +7,6 @@ import { motion } from "framer-motion";
 import { 
   LayoutDashboard, 
   Package, 
-  Settings, 
   Headphones,
   LogOut,
   FileText,
@@ -142,13 +141,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/dashboard/support",
       icon: (
         <Headphones className="text-slate-700 h-5 w-5 flex-shrink-0" />
-      ),
-    },
-    {
-      label: "تنظیمات",
-      href: "/dashboard/settings",
-      icon: (
-        <Settings className="text-slate-700 h-5 w-5 flex-shrink-0" />
       ),
     },
   ];
