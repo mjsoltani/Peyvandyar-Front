@@ -38,6 +38,7 @@ interface BulkEditForm {
   stock?: number;
   status?: "active" | "inactive";
   category?: string;
+  description?: string;
 }
 
 export default function BulkEditPage() {
@@ -66,6 +67,7 @@ export default function BulkEditPage() {
     stock: undefined,
     status: undefined,
     category: undefined,
+    description: undefined,
   });
 
   const fetchProducts = async (append = false) => {
@@ -215,6 +217,9 @@ export default function BulkEditPage() {
     if (bulkForm.category) {
       updateData.category = bulkForm.category;
     }
+    if (bulkForm.description) {
+      updateData.description = bulkForm.description;
+    }
 
     if (Object.keys(updateData).length === 0) {
       setSubmitError("لطفاً حداقل یک فیلد را برای ویرایش وارد کنید");
@@ -281,6 +286,10 @@ export default function BulkEditPage() {
           if (updateData.stock !== undefined) {
             updatePayload.stock = updateData.stock;
           }
+
+          if (updateData.description !== undefined) {
+            updatePayload.description = updateData.description;
+          }
         }
         
         return updatePayload;
@@ -297,6 +306,7 @@ export default function BulkEditPage() {
           stock: undefined,
           status: undefined,
           category: undefined,
+          description: undefined,
         });
         // ریست کردن لیست و رفرش از صفحه 1
         setCurrentPage(1);
@@ -542,6 +552,29 @@ export default function BulkEditPage() {
                         })
                       }
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">
+                      خالی بگذارید تا تغییر نکند
+                    </p>
+                  </div>
+
+                  {/* توضیحات */}
+                  <div>
+                    <label htmlFor="description-input" className="block text-sm font-medium text-slate-700 mb-2">
+                      توضیحات
+                    </label>
+                    <textarea
+                      id="description-input"
+                      placeholder="توضیحات محصول"
+                      value={bulkForm.description || ""}
+                      onChange={(e) =>
+                        setBulkForm({
+                          ...bulkForm,
+                          description: e.target.value || undefined,
+                        })
+                      }
+                      rows={4}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
                     />
                     <p className="text-xs text-slate-400 mt-1">
                       خالی بگذارید تا تغییر نکند

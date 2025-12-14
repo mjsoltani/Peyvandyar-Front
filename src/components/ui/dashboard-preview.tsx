@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
+import { FeatureModal } from "./feature-modal";
 import {
   Package,
   Edit2,
@@ -11,26 +13,35 @@ import {
 } from "lucide-react";
 
 export function DashboardPreview() {
+  const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
   const features = [
     {
+      id: "products",
       icon: <Package className="w-5 h-5" />,
       title: "مدیریت محصولات",
       description: "مشاهده و مدیریت تمام محصولات فروشگاه",
+      details: "در این قسمت می‌توانید تمام محصولات خود را مشاهده کنید. می‌توانید محصولات را جستجو کنید، فیلتر کنید و اطلاعات آن‌ها را مشاهده کنید. همچنین می‌توانید محصولات را انتخاب کنید و به صورت دسته‌ای ویرایش کنید.",
     },
     {
+      id: "bulk-edit",
       icon: <Edit2 className="w-5 h-5" />,
       title: "ویرایش انبوه",
       description: "ویرایش بیش از ۱۵۰۰ محصول به صورت همزمان",
+      details: "این قسمت برای ویرایش دسته‌ای محصولات است. می‌توانید قیمت، موجودی، توضیحات و سایر اطلاعات را برای چندین محصول به صورت همزمان تغییر دهید. این ویژگی باعث می‌شود که کار شما بسیار سریع‌تر انجام شود.",
     },
     {
+      id: "copy",
       icon: <Copy className="w-5 h-5" />,
       title: "کپی محصول",
       description: "کپی محصولات از فروشگاه‌های دیگر",
+      details: "می‌توانید محصولات را از فروشگاه‌های دیگری که شما دسترسی ندارید کپی کنید. فقط لینک محصول را وارد کنید و پیوندیار تمام اطلاعات را کپی می‌کند. این ویژگی برای شروع سریع با محصولات جدید بسیار مفید است.",
     },
     {
+      id: "reports",
       icon: <TrendingUp className="w-5 h-5" />,
       title: "آمار و گزارش",
       description: "مشاهده آمار تغییرات و عملیات انجام شده",
+      details: "گزارش‌های تفصیلی از تمام عملیات انجام شده را مشاهده کنید. می‌توانید ببینید چند محصول تغییر کرده‌اند، چه تغییراتی اعمال شده‌اند و کی اعمال شده‌اند. این اطلاعات برای پیگیری و تحلیل بسیار مفید است.",
     },
   ];
 
@@ -158,13 +169,14 @@ export function DashboardPreview() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {features.map((feature, index) => (
             <motion.div
-              key={index}
+              key={feature.id}
               custom={index + 4}
               variants={fadeUpVariants}
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
-              className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg hover:border-orange-200 transition-all duration-300"
+              onClick={() => setSelectedFeature(feature.id)}
+              className="bg-white rounded-xl border border-slate-200 p-6 hover:shadow-lg hover:border-orange-200 transition-all duration-300 cursor-pointer"
             >
               <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600 mb-4">
                 {feature.icon}
@@ -178,6 +190,20 @@ export function DashboardPreview() {
             </motion.div>
           ))}
         </div>
+
+        {/* Modal */}
+        {selectedFeature && (
+          <FeatureModal
+            isOpen={true}
+            onClose={() => setSelectedFeature(null)}
+            title={features.find((f) => f.id === selectedFeature)?.title || ""}
+            description={
+              features.find((f) => f.id === selectedFeature)?.description || ""
+            }
+            details={features.find((f) => f.id === selectedFeature)?.details || ""}
+            icon={features.find((f) => f.id === selectedFeature)?.icon}
+          />
+        )}
       </div>
     </section>
   );
