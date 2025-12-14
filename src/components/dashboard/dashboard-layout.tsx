@@ -10,7 +10,6 @@ import {
   Headphones,
   LogOut,
   FileText,
-  Shield,
   Copy,
 } from "lucide-react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
@@ -127,13 +126,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/dashboard/copy-product",
       icon: (
         <Copy className="text-slate-700 h-5 w-5 flex-shrink-0" />
-      ),
-    },
-    {
-      label: "پنل ادمین",
-      href: "/dashboard/admin",
-      icon: (
-        <Shield className="text-orange-600 h-5 w-5 flex-shrink-0" />
       ),
     },
     {

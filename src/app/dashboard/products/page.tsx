@@ -20,7 +20,8 @@ import {
   DollarSign,
   FileText,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  HelpCircle
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { ApiSectionWrapper } from "@/components/dashboard/api-error-boundary";
@@ -51,6 +52,7 @@ export default function ProductsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [totalProducts, setTotalProducts] = useState(0);
+  const [showAddProductHelp, setShowAddProductHelp] = useState(false);
   
   const itemsPerPage = 10;
 
@@ -151,8 +153,8 @@ export default function ProductsPage() {
   const handleBulkEdit = async () => {
     if (selectedProducts.length === 0) return;
     
-    // TODO: باز کردن modal یا صفحه ویرایش انبوه
-    console.log("Bulk edit products:", selectedProducts);
+    // رفتن به صفحه ویرایش انبوه
+    router.push("/dashboard/bulk-edit");
   };
 
   const formatPrice = (price: number) => {
@@ -233,13 +235,39 @@ export default function ProductsPage() {
 
               {/* Actions */}
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => router.push("/dashboard/copy-product")}
-                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span className="hidden sm:inline">افزودن محصول</span>
-                </button>
+                <div className="relative">
+                  <button 
+                    onClick={() => router.push("/dashboard/copy-product")}
+                    onMouseEnter={() => setShowAddProductHelp(true)}
+                    onMouseLeave={() => setShowAddProductHelp(false)}
+                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span className="hidden sm:inline">افزودن محصول</span>
+                  </button>
+                  
+                  {/* Help Tooltip */}
+                  {showAddProductHelp && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute bottom-full left-0 mb-2 w-64 bg-slate-900 text-white rounded-lg p-3 text-sm z-50 shadow-lg"
+                    >
+                      <div className="flex gap-2">
+                        <HelpCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-orange-400" />
+                        <div>
+                          <p className="font-medium mb-1">کپی محصول از غرفه‌های دیگر</p>
+                          <p className="text-slate-300 text-xs">
+                            این دکمه برای کپی محصولات از فروشگاه‌های دیگری که شما دسترسی ندارید استفاده می‌شود. می‌توانید لینک محصول را وارد کنید و آن را به فروشگاه خود اضافه کنید.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="absolute top-full left-4 w-2 h-2 bg-slate-900 transform rotate-45"></div>
+                    </motion.div>
+                  )}
+                </div>
+                
                 {selectedProducts.length > 0 && (
                   <button 
                     onClick={handleBulkEdit}

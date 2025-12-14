@@ -85,7 +85,7 @@ export default function CopyProductPage() {
             <div>
               <h1 className="text-2xl font-bold text-slate-800">کپی محصول</h1>
               <p className="text-sm text-slate-500">
-                کپی سریع محصولات موجود در فروشگاه
+                کپی محصول از غرفه ای که بهش دسترسی ندارید !
               </p>
             </div>
           </div>
