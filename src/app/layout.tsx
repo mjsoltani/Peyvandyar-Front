@@ -1,5 +1,8 @@
+"use client";
+
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { useEffect } from "react";
 import "./globals.css";
 
 // تعریف فونت ایران‌سنس با وزن‌های مختلف
@@ -45,22 +48,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  useEffect(() => {
+    // Initialize Clarity
+    import("@microsoft/clarity").then((clarity) => {
+      clarity.default("um1f6g7c32");
+    });
+  }, []);
+
   return (
     <html lang="fa" dir="rtl" className={iranSans.variable}>
-      <head>
-        <script
-          type="text/javascript"
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(c,l,a,r,i,t,y){
-                c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-                t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-                y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-              })(window, document, "clarity", "script", "um1f6g7c32");
-            `,
-          }}
-        />
-      </head>
       <body className="font-sans antialiased">
         {children}
       </body>
