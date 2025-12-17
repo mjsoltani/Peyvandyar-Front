@@ -409,7 +409,7 @@ export default function BulkEditPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* فرم ویرایش انبوه */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <div className="bg-white rounded-xl border border-slate-200 p-6 sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
                 <h2 className="text-xl font-bold text-slate-800 mb-4">
                   ویرایش انبوه
                 </h2>
