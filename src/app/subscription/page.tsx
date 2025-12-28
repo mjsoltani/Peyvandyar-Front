@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, X, Zap, Package, Copy, Headphones } from "lucide-react";
 import { NavBar } from "@/components/ui/tubelight-navbar";
 import { Footer } from "@/components/ui/footer";
+import { PaymentModal } from "@/components/ui/payment-modal";
 import { Home, Zap as ZapIcon, HelpCircle, LogIn, CreditCard } from "lucide-react";
 import { BASALAM_SSO_URL } from "@/lib/auth";
 
@@ -16,6 +18,7 @@ const navItems = [
 ];
 
 export default function SubscriptionPage() {
+  const [selectedPlan, setSelectedPlan] = useState<{name: string, price: string} | null>(null);
   const plans = [
     {
       id: "trial",
@@ -221,7 +224,7 @@ export default function SubscriptionPage() {
                     </div>
                   ) : (
                     <button
-                      onClick={() => window.open("https://basalam.com/choonehbread", "_blank")}
+                      onClick={() => setSelectedPlan({name: plan.name, price: plan.price})}
                       className={`w-full px-6 py-3 text-white rounded-xl font-bold transition-all duration-300 hover:shadow-lg ${plan.buttonColor}`}
                     >
                       {plan.buttonText}
@@ -265,6 +268,14 @@ export default function SubscriptionPage() {
           </motion.div>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={selectedPlan !== null}
+        onClose={() => setSelectedPlan(null)}
+        planName={selectedPlan?.name || ""}
+        price={selectedPlan?.price || ""}
+      />
 
       <Footer />
     </main>

@@ -12,7 +12,8 @@ import {
   Image as ImageIcon,
   User,
   Store,
-  BarChart3
+  BarChart3,
+  CreditCard
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { ApiSectionWrapper } from "@/components/dashboard/api-error-boundary";
@@ -228,6 +229,19 @@ export default function DashboardPage() {
                 </div>
                 <h3 className="font-bold text-slate-800 mb-1">کپی محصول</h3>
                 <p className="text-sm text-slate-500">کپی سریع محصولات موجود</p>
+              </motion.div>
+            </Link>
+
+            <Link href="/subscription">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="bg-white rounded-xl p-6 border border-slate-200 cursor-pointer hover:border-blue-300 hover:shadow-lg transition-all"
+              >
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                  <CreditCard className="w-6 h-6 text-blue-500" />
+                </div>
+                <h3 className="font-bold text-slate-800 mb-1">مشاهده اشتراک‌ها</h3>
+                <p className="text-sm text-slate-500">انتخاب و خرید اشتراک</p>
               </motion.div>
             </Link>
           </div>
