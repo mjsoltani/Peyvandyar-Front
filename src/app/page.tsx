@@ -8,12 +8,13 @@ import { DashboardPreview } from "@/components/ui/dashboard-preview";
 import { NavBar } from "@/components/ui/tubelight-navbar";
 import { Footer } from "@/components/ui/footer";
 import { BASALAM_SSO_URL } from "@/lib/auth";
-import { Home, Zap, HelpCircle, LogIn } from "lucide-react";
+import { Home, Zap, HelpCircle, LogIn, CreditCard } from "lucide-react";
 
 const navItems = [
   { name: "خانه", url: "#", icon: Home },
   { name: "امکانات", url: "#features", icon: Zap },
   { name: "راهنما", url: "#guide", icon: HelpCircle },
+  { name: "اشتراک", url: "/subscription", icon: CreditCard },
   { name: "ورود", url: BASALAM_SSO_URL, icon: LogIn },
 ];
 
