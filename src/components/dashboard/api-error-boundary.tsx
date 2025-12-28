@@ -81,12 +81,20 @@ export function ApiErrorDisplay({
           )}
           {isSubscriptionExpired && (
             <div className="space-y-3">
-              <button
-                onClick={() => window.open("https://basalam.com/choonehbread", "_blank")}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
-              >
-                تهیه اشتراک
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => window.location.href = "/subscription"}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
+                >
+                  مشاهده اشتراک‌ها
+                </button>
+                <button
+                  onClick={() => window.open("https://basalam.com/choonehbread", "_blank")}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+                >
+                  خرید مستقیم
+                </button>
+              </div>
               <p className="text-sm text-red-600">
                 برای ادامه استفاده از پیوندیار، لطفا اشتراک تهیه کنید.
               </p>
