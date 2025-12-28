@@ -22,16 +22,27 @@ export function ApiErrorDisplay({
                       error.message?.includes("غیرمجاز") ||
                       error.message?.includes("Authentication");
 
+  const isSubscriptionExpired = (error as any)?.isSubscriptionExpired || 
+                                error.message?.includes("اشتراک شما به پایان رسیده است");
+
+  const getErrorMessage = () => {
+    if (isSubscriptionExpired) {
+      return "اشتراک شما به پایان رسیده است. لطفا برای ادامه استفاده اشتراک تهیه کنید.";
+    }
+    if (isAuthError) {
+      return "متاسفانه به خاطر مشکل پیش آمده نمی‌توانید وارد شوید. لطفا مجددا تلاش بفرمایید.";
+    }
+    return error.message || "خطا در ارتباط با سرور";
+  };
+
   if (compact) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
         <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
         <p className="text-sm text-red-700 flex-1">
-          {isAuthError 
-            ? "متاسفانه به خاطر مشکل پیش آمده نمی‌توانید وارد شوید. لطفا مجددا تلاش بفرمایید."
-            : error.message || "خطا در ارتباط با سرور"}
+          {getErrorMessage()}
         </p>
-        {onRetry && (
+        {onRetry && !isSubscriptionExpired && (
           <button
             onClick={onRetry}
             className="text-red-600 hover:text-red-700 transition-colors"
@@ -57,11 +68,9 @@ export function ApiErrorDisplay({
         <div className="flex-1">
           <h3 className="text-lg font-bold text-red-800 mb-2">{title}</h3>
           <p className="text-red-700 mb-4">
-            {isAuthError 
-              ? "متاسفانه به خاطر مشکل پیش آمده نمی‌توانید وارد شوید. لطفا مجددا تلاش بفرمایید."
-              : error.message || "خطا در ارتباط با سرور"}
+            {getErrorMessage()}
           </p>
-          {onRetry && (
+          {onRetry && !isSubscriptionExpired && (
             <button
               onClick={onRetry}
               className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
@@ -69,6 +78,19 @@ export function ApiErrorDisplay({
               <RefreshCw className="w-4 h-4" />
               تلاش مجدد
             </button>
+          )}
+          {isSubscriptionExpired && (
+            <div className="space-y-3">
+              <button
+                onClick={() => window.open("https://basalam.com/choonehbread", "_blank")}
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2"
+              >
+                تهیه اشتراک
+              </button>
+              <p className="text-sm text-red-600">
+                برای ادامه استفاده از پیوندیار، لطفا اشتراک تهیه کنید.
+              </p>
+            </div>
           )}
         </div>
       </div>

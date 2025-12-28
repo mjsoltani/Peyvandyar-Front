@@ -24,7 +24,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public statusCode?: number,
-    public isAuthError: boolean = false
+    public isAuthError: boolean = false,
+    public isSubscriptionExpired: boolean = false
   ) {
     super(message);
     this.name = 'ApiError';
@@ -94,27 +95,41 @@ async function apiRequest<T>(
     if (!response.ok) {
       let errorMessage = `HTTP error! status: ${response.status}`;
       const isAuthError = response.status === 401 || response.status === 403;
+      let isSubscriptionExpired = false;
       
       try {
         const errorData = await response.json();
         errorMessage = errorData.message || errorData.error || errorMessage;
+        
+        // چک کردن subscription expired
+        if (errorData.error === "subscription_expired") {
+          isSubscriptionExpired = true;
+          errorMessage = errorData.message || "اشتراک شما به پایان رسیده است. لطفا برای ادامه استفاده اشتراک تهیه کنید.";
+        }
       } catch {
         // اگر response JSON نبود، از status text استفاده کن
         errorMessage = response.statusText || errorMessage;
       }
       
       // برای خطاهای احراز هویت، پیغام مناسب‌تر
-      if (isAuthError) {
+      if (isAuthError && !isSubscriptionExpired) {
         errorMessage = "دسترسی غیرمجاز - لطفا مجددا وارد شوید";
       }
       
-      throw new ApiError(errorMessage, response.status, isAuthError);
+      throw new ApiError(errorMessage, response.status, isAuthError, isSubscriptionExpired);
     }
 
     // چک کردن که response خالی نباشد
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
       const data = await response.json();
+      
+      // چک کردن subscription expired در successful response
+      if (data.success === false && data.error === "subscription_expired") {
+        const errorMessage = data.message || "اشتراک شما به پایان رسیده است. لطفا برای ادامه استفاده اشتراک تهیه کنید.";
+        throw new ApiError(errorMessage, 200, false, true);
+      }
+      
       return data;
     } else {
       // اگر JSON نبود، متن خام را برگردان
