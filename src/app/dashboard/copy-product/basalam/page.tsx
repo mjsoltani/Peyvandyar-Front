@@ -107,14 +107,14 @@ export default function BasalamCopyPage() {
 
   // مرحله 2: کپی محصول بعد از تایید
   const handleConfirmCopy = async () => {
-    if (!extractedProductId) return;
+    if (!extractedProductId || !productData) return;
 
     try {
       setIsCopying(true);
       setError("");
 
-      // کپی محصول
-      const response = await productsApi.copyProductFromBasalam(extractedProductId);
+      // کپی محصول با ارسال تمام داده‌ها (شامل تصاویر اضافی)
+      const response = await productsApi.copyProductFromBasalam(extractedProductId, productData);
       
       if (response.success) {
         setSuccess(true);

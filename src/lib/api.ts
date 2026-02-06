@@ -289,8 +289,13 @@ export const productsApi = {
   /**
    * کپی محصول از باسلام (بعد از تایید کاربر)
    */
-  copyProductFromBasalam: async (productId: string | number) => {
-    return apiRequest<any>(`/product/${productId}/copy`, { method: "POST" });
+  copyProductFromBasalam: async (productId: string | number, productData?: any) => {
+    // اگر productData ارسال شده، آن را در body قرار بده
+    const body = productData ? JSON.stringify({ product_data: productData }) : undefined;
+    return apiRequest<any>(`/product/${productId}/copy`, { 
+      method: "POST",
+      body
+    });
   },
 };
 
