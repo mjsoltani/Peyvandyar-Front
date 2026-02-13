@@ -74,9 +74,17 @@ export default function ProductsPage() {
       if (response.success) {
         // ساختار واقعی response از API:
         // response.data.data (آرایه محصولات)
-        // response.pagination.total (تعداد کل)
+        // response.pagination.total_count (تعداد کل)
         const productsData = response.data?.data || [];
-        const total = response.pagination?.total || 0;
+        const total = response.pagination?.total_count || response.pagination?.total || 0;
+        
+        console.log("Pagination Info:", {
+          total_count: response.pagination?.total_count,
+          total: response.pagination?.total,
+          result_count: response.pagination?.result_count,
+          total_page: response.pagination?.total_page,
+          calculated_total: total
+        });
         
         // تابع برای استخراج URL تصویر از response (طبق ساختار واقعی API)
         const getProductPhoto = (product: any): string | undefined => {
