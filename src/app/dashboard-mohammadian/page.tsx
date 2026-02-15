@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Store, ArrowRight, CheckCircle, Loader2, User, Calendar, Plus, ShoppingBag, MoreVertical, Package } from "lucide-react";
 
 interface UserData {
@@ -42,6 +43,7 @@ interface ChildStore {
 }
 
 export default function MohammadianDashboard() {
+  const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [childStores, setChildStores] = useState<ChildStore[]>([]);
   const [loading, setLoading] = useState(true);
@@ -236,14 +238,8 @@ export default function MohammadianDashboard() {
     }).format(date);
   };
 
-  const goToDashboard = (hashToken?: string) => {
-    if (hashToken) {
-      // Set hash token in cookie
-      document.cookie = `auth_token=${hashToken}; path=/; max-age=86400; SameSite=Lax`;
-      localStorage.setItem('auth_token', hashToken);
-    }
-    // Redirect to main dashboard
-    window.location.href = '/dashboard';
+  const goToStoreDetails = (vendorId: number) => {
+    router.push(`/dashboard-mohammadian/store/${vendorId}`);
   };
 
   return (
@@ -335,7 +331,7 @@ export default function MohammadianDashboard() {
                         <div className="absolute left-0 top-10 bg-white rounded-lg shadow-xl border border-slate-200 py-1 min-w-[180px] z-10">
                           <button
                             onClick={() => {
-                              goToDashboard(parentToken);
+                              goToStoreDetails(userData.user.basalam_vendor_id);
                               setOpenMenuId(null);
                             }}
                             className="w-full px-4 py-2 text-right text-sm text-slate-700 hover:bg-orange-50 flex items-center gap-2 transition-colors"
@@ -438,7 +434,7 @@ export default function MohammadianDashboard() {
                               </button>
                               <button
                                 onClick={() => {
-                                  goToDashboard(child.child_token_hash);
+                                  goToStoreDetails(child.vendor_id);
                                   setOpenMenuId(null);
                                 }}
                                 className="w-full px-4 py-2 text-right text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors"

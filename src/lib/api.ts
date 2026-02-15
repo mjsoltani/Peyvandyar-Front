@@ -297,6 +297,73 @@ export const productsApi = {
       body
     });
   },
+
+  /**
+   * آپلود تصویر محصول
+   */
+  uploadProductImage: async (file: File) => {
+    const token = getAuthToken();
+    
+    if (!token) {
+      throw new ApiError("Authentication required", 401, true);
+    }
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_BASE_URL}/products/upload-image`, {
+      method: 'POST',
+      headers: {
+        'Accept': '*/*',
+        'X-Encrypted-Token': token,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorMessage = `خطا در آپلود تصویر: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch {
+        errorMessage = response.statusText || errorMessage;
+      }
+      throw new ApiError(errorMessage, response.status);
+    }
+
+    const data = await response.json();
+    return data;
+  },
+
+  /**
+   * ایجاد محصول جدید
+   */
+  createProduct: async (productData: {
+    name: string;
+    category_id: number;
+    photo: number;
+    primary_price: number;
+    stock: number;
+    photos?: number[];
+    brief?: string;
+    description?: string;
+    preparation_days?: number;
+    weight?: number;
+    package_weight?: number;
+    sku?: string;
+    is_wholesale?: boolean;
+  }) => {
+    // تبدیل قیمت از تومان به ریال
+    const dataToSend = {
+      ...productData,
+      primary_price: productData.primary_price * 10,
+    };
+
+    return apiRequest<any>('/products', {
+      method: 'POST',
+      body: JSON.stringify(dataToSend),
+    });
+  },
 };
 
 // User/Profile API
