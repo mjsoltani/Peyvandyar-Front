@@ -249,9 +249,9 @@ export default function StoreDetailsPage() {
         <CreateProductModal
           vendorId={vendorId}
           onClose={() => setShowCreateModal(false)}
-          onSuccess={(newProduct) => {
-            setProducts([newProduct, ...products]);
+          onSuccess={() => {
             setShowCreateModal(false);
+            fetchProducts();
           }}
         />
       )}
@@ -390,11 +390,7 @@ function CreateProductModal({ vendorId, onClose, onSuccess }: any) {
       }
 
       // بستن مودال و رفرش لیست
-      onSuccess(createResponse.data);
-      onClose();
-      
-      // رفرش صفحه برای نمایش محصول جدید
-      window.location.reload();
+      onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ایجاد محصول');
       console.error('Error creating product:', err);
