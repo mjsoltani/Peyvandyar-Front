@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getAuthToken } from "@/lib/auth";
 import { productsApi } from "@/lib/api";
@@ -16,8 +16,6 @@ import {
   RefreshCw,
   Loader2,
   CheckCircle,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { cn } from "@/lib/utils";
@@ -51,6 +49,7 @@ export default function BulkEditPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -59,6 +58,16 @@ export default function BulkEditPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   
   const itemsPerPage = 100; // 100 محصول در هر صفحه
+  
+  // Debounce برای جستجو (500ms تاخیر)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1); // ریست به صفحه اول وقتی جستجو تغییر میکند
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // فرم ویرایش انبوه
   const [bulkForm, setBulkForm] = useState<BulkEditForm>({
@@ -83,7 +92,7 @@ export default function BulkEditPage() {
       const response = await productsApi.getProducts({
         page: currentPage,
         per_page: itemsPerPage,
-        search: searchQuery || undefined,
+        search: debouncedSearch || undefined,
       });
 
       if (response.success && response.data) {
@@ -141,20 +150,8 @@ export default function BulkEditPage() {
       return;
     }
 
-    // اگر صفحه 1 هست یا search تغییر کرده، از اول لود کن
-    if (currentPage === 1) {
-      fetchProducts(false);
-    } else {
-      // اگر صفحه بعدی هست، append کن
-      fetchProducts(true);
-    }
-  }, [currentPage]);
-
-  // وقتی search تغییر کرد، صفحه رو ریست کن
-  useEffect(() => {
-    setCurrentPage(1);
-    setProducts([]);
-  }, [searchQuery]);
+    fetchProducts(false);
+  }, [currentPage, debouncedSearch]);
 
   // Infinite scroll - وقتی کاربر به پایین رسید
   useEffect(() => {
@@ -629,8 +626,8 @@ export default function BulkEditPage() {
                     placeholder="جستجو در محصولات..."
                     value={searchQuery}
                     onChange={(e) => {
+                      setProducts([]); // پاک کردن محصولات قبلی
                       setSearchQuery(e.target.value);
-                      setCurrentPage(1);
                     }}
                     className="w-full pr-10 pl-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
