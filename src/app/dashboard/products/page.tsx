@@ -85,7 +85,7 @@ export default function ProductsPage() {
 
         if (response.success) {
           const rawProducts = response.data?.products || [];
-          const total = response.total || 0;
+          const total = (response as any).total || 0;
 
           const mappedProducts = rawProducts.map((p: any) => ({
             id: p.id,
