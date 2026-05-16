@@ -164,7 +164,7 @@ export default function ProductsPage() {
       return;
     }
     // دریافت vendor identifier یک بار
-    userApi.getVendorId().then((res) => {
+    userApi.getVendorId().then((res: any) => {
       if (res.success && res.vendor_identifier) {
         setVendorIdentifier(res.vendor_identifier);
       }
