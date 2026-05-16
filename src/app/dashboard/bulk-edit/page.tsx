@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getAuthToken } from "@/lib/auth";
-import { productsApi } from "@/lib/api";
+import { productsApi, userApi } from "@/lib/api";
 import { motion } from "framer-motion";
 import {
   Package,
@@ -50,6 +50,7 @@ export default function BulkEditPage() {
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [vendorIdentifier, setVendorIdentifier] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -89,46 +90,75 @@ export default function BulkEditPage() {
       setIsError(false);
       setErrorMessage("");
 
-      const response = await productsApi.getProducts({
-        page: currentPage,
-        per_page: itemsPerPage,
-        search: debouncedSearch || undefined,
-      });
+      let mappedProducts: any[] = [];
+      let total = 0;
+      let totalPage = 0;
 
-      if (response.success && response.data) {
-        const productsData = response.data?.data || [];
-        const total = response.pagination?.total || response.data?.pagination?.total || 0;
-        const totalPage = response.pagination?.total_page || response.data?.pagination?.total_page || 0;
-
-        // تبدیل ساختار API به ساختار مورد نیاز کامپوننت
-        const mappedProducts = productsData.map((p: any) => {
-          // قیمت از API به ریال میاد، باید به تومان تبدیلش کنیم
-          const priceInRial = p.price || p.primary_price || 0;
-          const priceInToman = Math.round(priceInRial / 10);
-          
-          return {
-            id: p.id,
-            name: p.title || p.name || "بدون نام",
-            price: priceInToman, // قیمت به تومان
-            stock: p.inventory || p.stock || 0,
-            image: p.photo?.sm || p.photo?.xs || p.photo?.md || p.image || p.primary_image,
-            category: p.category?.title || p.unit_type?.name || p.category || "بدون دسته",
-            status: p.status?.name === "در دسترس" ? "active" : "inactive",
-            variant: p.variant || [], // ذخیره variant برای استفاده بعدی
-          };
+      // اگر جستجو داریم و vendorIdentifier موجوده، از endpoint جدید استفاده کن
+      if (debouncedSearch && vendorIdentifier) {
+        const response = await productsApi.searchProducts({
+          q: debouncedSearch,
+          vendorIdentifier,
+          rows: itemsPerPage,
+          start: (currentPage - 1) * itemsPerPage,
         });
 
-        // اگر append باشه، محصولات جدید رو به لیست اضافه کن
-        if (append) {
-          setProducts(prev => [...prev, ...mappedProducts]);
+        if (response.success) {
+          const rawProducts = response.data?.products || [];
+          total = (response as any).total || 0;
+          totalPage = Math.ceil(total / itemsPerPage);
+
+          mappedProducts = rawProducts.map((p: any) => ({
+            id: p.id,
+            name: p.title || p.name || "بدون نام",
+            price: Math.round((p.price || 0) / 10),
+            stock: p.inventory || p.stock || 0,
+            image: p.photo?.sm || p.photo?.xs || p.photo?.md,
+            category: p.unit_type?.name || p.category?.title || "بدون دسته",
+            status: p.status?.name === "در دسترس" ? "active" : "inactive",
+            variant: p.variant || [],
+          }));
         } else {
-          setProducts(mappedProducts);
+          throw new Error(response.message || "خطا در جستجوی محصولات");
         }
-        setTotalProducts(total);
-        setTotalPages(totalPage);
       } else {
-        throw new Error(response.message || "خطا در دریافت محصولات");
+        // حالت عادی بدون سرچ
+        const response = await productsApi.getProducts({
+          page: currentPage,
+          per_page: itemsPerPage,
+          search: debouncedSearch || undefined,
+        });
+
+        if (response.success && response.data) {
+          const productsData = response.data?.data || [];
+          total = response.pagination?.total || response.data?.pagination?.total || 0;
+          totalPage = response.pagination?.total_page || response.data?.pagination?.total_page || 0;
+
+          mappedProducts = productsData.map((p: any) => {
+            const priceInRial = p.price || p.primary_price || 0;
+            return {
+              id: p.id,
+              name: p.title || p.name || "بدون نام",
+              price: Math.round(priceInRial / 10),
+              stock: p.inventory || p.stock || 0,
+              image: p.photo?.sm || p.photo?.xs || p.photo?.md || p.image || p.primary_image,
+              category: p.category?.title || p.unit_type?.name || p.category || "بدون دسته",
+              status: p.status?.name === "در دسترس" ? "active" : "inactive",
+              variant: p.variant || [],
+            };
+          });
+        } else {
+          throw new Error(response.message || "خطا در دریافت محصولات");
+        }
       }
+
+      if (append) {
+        setProducts(prev => [...prev, ...mappedProducts]);
+      } else {
+        setProducts(mappedProducts);
+      }
+      setTotalProducts(total);
+      setTotalPages(totalPage);
     } catch (error: any) {
       console.error("Error fetching products:", error);
       setIsError(true);
@@ -150,8 +180,17 @@ export default function BulkEditPage() {
       return;
     }
 
+    // دریافت vendor identifier یک بار
+    userApi.getVendorId().then((res: any) => {
+      if (res.success && res.vendor_identifier) {
+        setVendorIdentifier(res.vendor_identifier);
+      }
+    }).catch(() => {});
+  }, [router]);
+
+  useEffect(() => {
     fetchProducts(false);
-  }, [currentPage, debouncedSearch]);
+  }, [currentPage, debouncedSearch, vendorIdentifier]);
 
   // Infinite scroll - وقتی کاربر به پایین رسید
   useEffect(() => {

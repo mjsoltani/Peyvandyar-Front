@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAuthToken } from "@/lib/auth";
-import { productsApi } from "@/lib/api";
+import { productsApi, userApi } from "@/lib/api";
 import { motion } from "framer-motion";
 import { 
   Search,
@@ -49,6 +49,8 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [vendorIdentifier, setVendorIdentifier] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [totalProducts, setTotalProducts] = useState(0);
@@ -56,66 +58,90 @@ export default function ProductsPage() {
   
   const itemsPerPage = 10;
 
+  // Debounce برای جستجو (500ms تاخیر)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
       setIsError(false);
-      
-      const response = await productsApi.getProducts({
+
+      let response;
+
+      // اگر جستجو داریم و vendorIdentifier موجوده، از endpoint جدید استفاده کن
+      if (debouncedSearch && vendorIdentifier) {
+        response = await productsApi.searchProducts({
+          q: debouncedSearch,
+          vendorIdentifier,
+          rows: itemsPerPage,
+          start: (currentPage - 1) * itemsPerPage,
+        });
+
+        if (response.success) {
+          const rawProducts = response.data?.products || [];
+          const total = response.total || 0;
+
+          const mappedProducts = rawProducts.map((p: any) => ({
+            id: p.id,
+            name: p.title || "بدون نام",
+            price: p.price ? Math.round(p.price / 10) : 0,
+            stock: p.inventory || 0,
+            photo: p.photo?.md || p.photo?.sm || p.photo?.xs,
+            category: p.unit_type?.name || "بدون دسته",
+            status: p.status?.name === "در دسترس" ? "active" : "inactive",
+            lastModified: p.published || "نامشخص",
+            sku: p.sku,
+            unitType: p.unit_type?.name,
+            preparationDay: p.preparation_day,
+          }));
+
+          setProducts(mappedProducts);
+          setTotalProducts(total);
+          return;
+        }
+      }
+
+      // حالت عادی (بدون سرچ یا بدون vendorIdentifier)
+      response = await productsApi.getProducts({
         page: currentPage,
         per_page: itemsPerPage,
-        search: searchQuery || undefined,
+        search: debouncedSearch || undefined,
         status: filterStatus,
       });
 
-      // Debug: نمایش response برای بررسی ساختار
       console.log("Products API Response:", response);
 
       if (response.success) {
-        // ساختار واقعی response از API:
-        // response.data.data (آرایه محصولات)
-        // response.pagination.total_count (تعداد کل)
         const productsData = response.data?.data || [];
         const total = response.pagination?.total_count || response.pagination?.total || 0;
-        
-        console.log("Pagination Info:", {
-          total_count: response.pagination?.total_count,
-          total: response.pagination?.total,
-          result_count: response.pagination?.result_count,
-          total_page: response.pagination?.total_page,
-          calculated_total: total
-        });
-        
-        // تابع برای استخراج URL تصویر از response (طبق ساختار واقعی API)
+
         const getProductPhoto = (product: any): string | undefined => {
-          // طبق response واقعی، تصویر فقط در product.photo است
           if (product.photo) {
-            // استفاده از md (medium) برای نمایش در لیست
-            // اگر md نبود، از sm یا xs استفاده کن
             return product.photo.md || product.photo.sm || product.photo.xs || product.photo.original || product.photo.lg;
           }
-          
           return undefined;
         };
-        
-        // تبدیل ساختار API به ساختار مورد نیاز کامپوننت (طبق response واقعی)
+
         const mappedProducts = productsData.map((p: any) => ({
           id: p.id,
           name: p.title || "بدون نام",
-          // تبدیل ریال به تومان (تقسیم بر 10) - API قیمت را به ریال می‌دهد
           price: p.price ? Math.round(p.price / 10) : 0,
           stock: p.inventory || 0,
-          photo: getProductPhoto(p), // فقط از product.photo استفاده می‌کنیم
-          category: p.unit_type?.name || "بدون دسته", // استفاده از unit_type.name
-          status: p.status?.name === "در دسترس" ? "active" : "inactive", // استفاده از status.name
+          photo: getProductPhoto(p),
+          category: p.unit_type?.name || "بدون دسته",
+          status: p.status?.name === "در دسترس" ? "active" : "inactive",
           lastModified: p.published || "نامشخص",
           sku: p.sku,
           unitType: p.unit_type?.name,
           preparationDay: p.preparation_day,
         }));
-        
-        console.log("Mapped Products:", mappedProducts);
-        
+
         setProducts(mappedProducts);
         setTotalProducts(total);
       } else {
@@ -133,14 +159,21 @@ export default function ProductsPage() {
 
   useEffect(() => {
     const authToken = getAuthToken();
-    
     if (!authToken) {
       router.push("/");
       return;
     }
-    
+    // دریافت vendor identifier یک بار
+    userApi.getVendorId().then((res) => {
+      if (res.success && res.vendor_identifier) {
+        setVendorIdentifier(res.vendor_identifier);
+      }
+    }).catch(() => {});
+  }, [router]);
+
+  useEffect(() => {
     fetchProducts();
-  }, [router, currentPage, searchQuery, filterStatus]);
+  }, [currentPage, debouncedSearch, filterStatus, vendorIdentifier]);
 
   const toggleProductSelection = (productId: number) => {
     setSelectedProducts(prev =>
@@ -216,10 +249,7 @@ export default function ProductsPage() {
                   type="text"
                   placeholder="جستجو در محصولات..."
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1); // Reset to first page on search
-                  }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pr-10 pl-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>

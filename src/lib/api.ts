@@ -234,6 +234,28 @@ export const productsApi = {
   },
 
   /**
+   * جستجوی محصولات با endpoint جدید (POST /products/search)
+   */
+  searchProducts: async (params: {
+    q: string;
+    vendorIdentifier: string;
+    rows?: number;
+    start?: number;
+    slug?: string;
+    freeShipping?: number;
+    sameCity?: number;
+    minPrice?: number;
+    maxPrice?: number;
+    minRating?: number;
+    vendorScore?: number;
+  }) => {
+    return apiRequest<any>("/products/search", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  },
+
+  /**
    * دریافت یک محصول خاص
    */
   getProduct: async (id: number) => {
@@ -372,7 +394,7 @@ export const userApi = {
    * دریافت اطلاعات کاربر فعلی
    */
   getProfile: async () => {
-    return apiRequest<any>("/me", { method: "GET" }); // طبق API-ENDPOINTS.json endpoint /api/me است
+    return apiRequest<any>("/me", { method: "GET" });
   },
   
   /**
@@ -382,7 +404,13 @@ export const userApi = {
     return apiRequest<any>("/user", { method: "GET" });
   },
 
-
+  /**
+   * دریافت vendor_identifier فروشگاه
+   * GET /api/vendor-id
+   */
+  getVendorId: async () => {
+    return apiRequest<any>("/vendor-id", { method: "GET" });
+  },
 };
 
 // Currency API
