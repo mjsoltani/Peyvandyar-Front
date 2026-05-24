@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CheckCircle, XCircle, Loader2, AlertCircle } from "lucide-react";
 import { paymentApi } from "@/lib/api";
 
-export default function PaymentCallbackPage() {
+function PaymentCallbackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [status, setStatus] = useState<"loading" | "success" | "failed" | "unverified">("loading");
+  const [status, setStatus] = useState<"loading" | "success" | "failed" | "unverified" | "pending">("loading");
   const [message, setMessage] = useState<string>("");
   const [details, setDetails] = useState<{
     amount?: number;
@@ -39,19 +39,19 @@ export default function PaymentCallbackPage() {
         // دریافت وضعیت نهایی از سرور
         const response = await paymentApi.getPaymentStatus(hashId);
 
-        if (response.success) {
-          setStatus(response.status);
+        if (response.success && response.data) {
+          setStatus(response.data.status);
           setMessage(
-            response.message ||
-              (response.status === "success"
+            response.data.message ||
+              (response.data.status === "success"
                 ? "پرداخت با موفقیت انجام شد و اشتراک شما فعال گردید"
-                : response.status === "failed"
+                : response.data.status === "failed"
                 ? "پرداخت ناموفق بود"
                 : "وضعیت پرداخت نامشخص است")
           );
           setDetails({
-            amount: response.amount,
-            reference_id: response.reference_id,
+            amount: response.data.amount,
+            reference_id: response.data.reference_id,
           });
         } else {
           setStatus("failed");
@@ -82,7 +82,7 @@ export default function PaymentCallbackPage() {
       y: 0,
       transition: {
         duration: 0.6,
-        ease: "easeOut",
+        ease: "easeOut" as const,
       },
     },
   };
@@ -117,7 +117,7 @@ export default function PaymentCallbackPage() {
             {status === "failed" && (
               <XCircle className="w-16 h-16 text-red-500 mb-4" />
             )}
-            {status === "unverified" && (
+            {(status === "unverified" || status === "pending") && (
               <AlertCircle className="w-16 h-16 text-amber-500 mb-4" />
             )}
 
@@ -128,6 +128,8 @@ export default function PaymentCallbackPage() {
                 ? "پرداخت موفق"
                 : status === "failed"
                 ? "پرداخت ناموفق"
+                : status === "pending"
+                ? "در انتظار تایید"
                 : "وضعیت نامشخص"}
             </h1>
 
@@ -182,7 +184,7 @@ export default function PaymentCallbackPage() {
               </div>
 
               {/* Support Info */}
-              {(status === "failed" || status === "unverified") && (
+              {(status === "failed" || status === "unverified" || status === "pending") && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
                   <p className="text-blue-800 text-sm">
                     <strong>نیاز به کمک دارید؟</strong>
@@ -204,5 +206,26 @@ export default function PaymentCallbackPage() {
         </div>
       </motion.div>
     </main>
+  );
+}
+
+export default function PaymentCallbackPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gradient-to-b from-orange-50/30 to-white flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+            <div className="px-6 py-8 flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-white">
+              <Loader2 className="w-16 h-16 text-slate-500 animate-spin mb-4" />
+              <h1 className="text-2xl font-bold text-slate-800 mb-2 text-center">
+                در حال بررسی پرداخت...
+              </h1>
+            </div>
+          </div>
+        </div>
+      </main>
+    }>
+      <PaymentCallbackContent />
+    </Suspense>
   );
 }

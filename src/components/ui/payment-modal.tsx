@@ -44,9 +44,9 @@ export function PaymentModal({
         description: `خرید ${planName}`,
       });
 
-      if (response.success && response.pay_url) {
+      if (response.success && response.data?.pay_url) {
         // redirect به درگاه پرداخت
-        window.location.href = response.pay_url;
+        window.location.href = response.data.pay_url;
       } else {
         setError("خطا در ایجاد تراکنش. لطفا دوباره تلاش کنید.");
       }
