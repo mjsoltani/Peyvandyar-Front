@@ -39,23 +39,23 @@ function PaymentCallbackContent() {
         // دریافت وضعیت نهایی از سرور
         const response = await paymentApi.getPaymentStatus(hashId);
 
-        if (response.success && response.data) {
-          setStatus(response.data.status);
+        if (response.success && response.status) {
+          setStatus(response.status);
           setMessage(
-            response.data.message ||
-              (response.data.status === "success"
+            response.message ||
+              (response.status === "success"
                 ? "پرداخت با موفقیت انجام شد و اشتراک شما فعال گردید"
-                : response.data.status === "failed"
+                : response.status === "failed"
                 ? "پرداخت ناموفق بود"
                 : "وضعیت پرداخت نامشخص است")
           );
           setDetails({
-            amount: response.data.amount,
-            reference_id: response.data.reference_id,
+            amount: response.amount,
+            reference_id: response.reference_id,
           });
         } else {
           setStatus("failed");
-          setMessage(response.message || "خطا در بررسی وضعیت پرداخت");
+          setMessage(response.message || response.error || "خطا در بررسی وضعیت پرداخت");
         }
       } catch (error: any) {
         console.error("Payment callback error:", error);

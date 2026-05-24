@@ -73,11 +73,15 @@ export function PaymentModal({
         description: `خرید ${planName}`,
       });
 
-      if (response.success && response.data?.pay_url) {
+      console.log("Payment response:", response);
+
+      if (response.success && response.pay_url) {
         // redirect به درگاه پرداخت
-        window.location.href = response.data.pay_url;
+        console.log("Redirecting to:", response.pay_url);
+        window.location.href = response.pay_url;
       } else {
-        setError("خطا در ایجاد تراکنش. لطفا دوباره تلاش کنید.");
+        console.error("Payment failed:", response);
+        setError(response.message || response.error || "خطا در ایجاد تراکنش. لطفا دوباره تلاش کنید.");
       }
     } catch (err: any) {
       console.error("Payment error:", err);

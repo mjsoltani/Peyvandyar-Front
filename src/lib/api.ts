@@ -649,15 +649,8 @@ export const paymentApi = {
         ? `${window.location.origin}/payment/callback`
         : 'https://peyvandyar.amintvk.ir/payment/callback');
 
-    return apiRequest<{
-      success: boolean;
-      hash_id: string;
-      pay_url: string;
-      reference_id: string;
-      expired_at: string;
-      amount: number;
-      total_amount: number;
-    }>("/payment/create", {
+    // بکند مستقیم فیلدها رو برمی‌گردونه (بدون data wrapper)
+    const response = await apiRequest<any>("/payment/create", {
       method: "POST",
       body: JSON.stringify({
         amount: params.amount,
@@ -665,6 +658,19 @@ export const paymentApi = {
         callback_url: callbackUrl,
       }),
     });
+    
+    // Response structure: {success, hash_id, pay_url, reference_id, expired_at, amount, total_amount}
+    return response as {
+      success: boolean;
+      hash_id?: string;
+      pay_url?: string;
+      reference_id?: string;
+      expired_at?: string;
+      amount?: number;
+      total_amount?: number;
+      error?: string;
+      message?: string;
+    };
   },
 
   /**
@@ -672,16 +678,20 @@ export const paymentApi = {
    * GET /api/payment/status/{hash_id}
    */
   getPaymentStatus: async (hashId: string) => {
-    return apiRequest<{
+    const response = await apiRequest<any>(`/payment/status/${hashId}`, {
+      method: "GET",
+    });
+    
+    // Response structure: {success, status, hash_id, amount?, reference_id?, message?}
+    return response as {
       success: boolean;
-      status: "success" | "failed" | "pending" | "unverified";
-      hash_id: string;
+      status?: "success" | "failed" | "pending" | "unverified";
+      hash_id?: string;
       amount?: number;
       reference_id?: string;
       message?: string;
-    }>(`/payment/status/${hashId}`, {
-      method: "GET",
-    });
+      error?: string;
+    };
   },
 };
 
