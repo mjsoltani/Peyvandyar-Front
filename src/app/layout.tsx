@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { ClarityProvider } from "@/components/clarity-provider";
+import { QueryProvider } from "@/shared/providers/query-provider";
 import "./globals.css";
 
 // تعریف فونت ایران‌سنس با وزن‌های مختلف
@@ -49,8 +50,10 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl" className={iranSans.variable}>
       <body className="font-sans antialiased">
-        <ClarityProvider />
-        {children}
+        <QueryProvider>
+          <ClarityProvider />
+          {children}
+        </QueryProvider>
       </body>
     </html>
   );
