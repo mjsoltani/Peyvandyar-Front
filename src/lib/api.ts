@@ -632,3 +632,45 @@ export const adminApi = {
   },
 };
 
+// Payment API
+export const paymentApi = {
+  /**
+   * ایجاد پیش‌تراکنش پرداخت
+   * POST /api/payment/create
+   */
+  createPayment: async (params: {
+    amount: number; // مبلغ به ریال
+    description: string;
+  }) => {
+    return apiRequest<{
+      success: boolean;
+      hash_id: string;
+      pay_url: string;
+      reference_id: string;
+      expired_at: string;
+      amount: number;
+      total_amount: number;
+    }>("/payment/create", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+  },
+
+  /**
+   * بررسی وضعیت تراکنش
+   * GET /api/payment/status/{hash_id}
+   */
+  getPaymentStatus: async (hashId: string) => {
+    return apiRequest<{
+      success: boolean;
+      status: "success" | "failed" | "pending" | "unverified";
+      hash_id: string;
+      amount?: number;
+      reference_id?: string;
+      message?: string;
+    }>(`/payment/status/${hashId}`, {
+      method: "GET",
+    });
+  },
+};
+

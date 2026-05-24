@@ -1,8 +1,10 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, CreditCard, MessageCircle, Send } from "lucide-react";
+import { X, CreditCard, Loader2, AlertCircle } from "lucide-react";
 import { useState } from "react";
+import { paymentApi } from "@/lib/api";
+import { getAuthToken } from "@/lib/auth";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -17,13 +19,45 @@ export function PaymentModal({
   planName,
   price,
 }: PaymentModalProps) {
-  const [copied, setCopied] = useState(false);
-  const cardNumber = "6219861906915771";
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const copyCardNumber = () => {
-    navigator.clipboard.writeText(cardNumber);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handlePayment = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // چک کردن احراز هویت
+      const token = getAuthToken();
+      if (!token) {
+        setError("لطفا ابتدا وارد حساب کاربری خود شوید");
+        return;
+      }
+
+      // تبدیل قیمت از تومان به ریال (ضرب در 10)
+      const priceNumber = parseInt(price.replace(/,/g, ""));
+      const amountInRial = priceNumber * 10;
+
+      // ایجاد پیش‌تراکنش
+      const response = await paymentApi.createPayment({
+        amount: amountInRial,
+        description: `خرید ${planName}`,
+      });
+
+      if (response.success && response.pay_url) {
+        // redirect به درگاه پرداخت
+        window.location.href = response.pay_url;
+      } else {
+        setError("خطا در ایجاد تراکنش. لطفا دوباره تلاش کنید.");
+      }
+    } catch (err: any) {
+      console.error("Payment error:", err);
+      setError(
+        err.message || "خطا در برقراری ارتباط با درگاه پرداخت. لطفا دوباره تلاش کنید."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -63,6 +97,7 @@ export function PaymentModal({
                 <button
                   onClick={onClose}
                   className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+                  disabled={isLoading}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -70,23 +105,29 @@ export function PaymentModal({
 
               {/* Content */}
               <div className="px-6 py-6 space-y-6">
-                {/* Card Number */}
+                {/* Error Message */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-red-800 text-sm">{error}</p>
+                  </div>
+                )}
+
+                {/* Payment Info */}
                 <div className="bg-slate-50 rounded-xl p-4">
                   <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
                     <CreditCard className="w-5 h-5 text-orange-500" />
-                    شماره کارت
+                    اطلاعات پرداخت
                   </h3>
-                  <div className="flex items-center gap-3 bg-white rounded-lg p-3 border">
-                    <span className="font-mono text-lg text-slate-800 flex-1">
-                      {cardNumber}
-                    </span>
-                    <button
-                      onClick={copyCardNumber}
-                      className="px-3 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-1 text-sm"
-                    >
-                      <Copy className="w-4 h-4" />
-                      {copied ? "کپی شد!" : "کپی"}
-                    </button>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">نام اشتراک:</span>
+                      <span className="font-semibold text-slate-800">{planName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">مبلغ:</span>
+                      <span className="font-semibold text-slate-800">{price} تومان</span>
+                    </div>
                   </div>
                 </div>
 
@@ -98,67 +139,56 @@ export function PaymentModal({
                       <span className="w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
                         ۱
                       </span>
-                      <span>مبلغ {price} تومان را به شماره کارت بالا واریز کنید</span>
+                      <span>روی دکمه "انتقال به درگاه پرداخت" کلیک کنید</span>
                     </div>
                     <div className="flex gap-3">
                       <span className="w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
                         ۲
                       </span>
-                      <span>عکس رسید واریز را تهیه کنید</span>
+                      <span>در صفحه درگاه باسلام، پرداخت را انجام دهید</span>
                     </div>
                     <div className="flex gap-3">
                       <span className="w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
                         ۳
                       </span>
-                      <span>از یکی از روش‌های زیر برای ارسال رسید استفاده کنید</span>
+                      <span>پس از پرداخت موفق، به صورت خودکار به سایت برمی‌گردید</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Contact Methods */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    onClick={() => window.open("https://basalam.com/choonehbread", "_blank")}
-                    className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors border border-blue-200"
-                  >
-                    <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                      <MessageCircle className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-blue-800">باسلام</div>
-                      <div className="text-xs text-blue-600">ارسال پیام</div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => window.open("https://t.me/mjsoltani2001", "_blank")}
-                    className="flex items-center gap-3 p-4 bg-sky-50 hover:bg-sky-100 rounded-xl transition-colors border border-sky-200"
-                  >
-                    <div className="w-10 h-10 bg-sky-500 rounded-lg flex items-center justify-center">
-                      <Send className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="text-right">
-                      <div className="font-semibold text-sky-800">تلگرام</div>
-                      <div className="text-xs text-sky-600">@mjsoltani2001</div>
-                    </div>
-                  </button>
-                </div>
-
                 {/* Note */}
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <p className="text-amber-800 text-sm">
-                    <strong>توجه:</strong> پس از ارسال رسید، اشتراک شما ظرف ۲۴ ساعت فعال خواهد شد.
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-blue-800 text-sm">
+                    <strong>توجه:</strong> پس از پرداخت موفق، اشتراک شما به صورت خودکار فعال می‌شود.
                   </p>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
                 <button
                   onClick={onClose}
-                  className="px-6 py-2 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors font-medium"
+                  disabled={isLoading}
+                  className="px-6 py-2 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   بستن
+                </button>
+                <button
+                  onClick={handlePayment}
+                  disabled={isLoading}
+                  className="px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      در حال انتقال...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4" />
+                      انتقال به درگاه پرداخت
+                    </>
+                  )}
                 </button>
               </div>
             </div>

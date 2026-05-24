@@ -450,6 +450,71 @@
           "vendor_title": "عطرفروشی مجتبی"
         }
       }
+    },
+    {
+      "name": "Create Payment",
+      "method": "POST",
+      "path": "/api/payment/create",
+      "auth_required": true,
+      "description": "ایجاد پیش‌تراکنش پرداخت و دریافت لینک درگاه باسلام",
+      "request": {
+        "headers": {
+          "X-Encrypted-Token": "a1b2c3d4e5f6:9f8e7d6c5b4a3210...",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "amount": 500000,
+          "description": "خرید اشتراک ماهانه"
+        }
+      },
+      "response_example": {
+        "success": true,
+        "hash_id": "a1b2c3d4e5f6",
+        "pay_url": "https://apps.basalam.com/pay/a1b2c3d4e5f6",
+        "reference_id": "ORDER-1716000000000-AB12C",
+        "expired_at": "2026-05-15T12:33:00Z",
+        "amount": 500000,
+        "total_amount": 505000
+      },
+      "notes": "مبلغ به ریال است. کاربر را به pay_url redirect کنید."
+    },
+    {
+      "name": "Payment Callback",
+      "method": "GET",
+      "path": "/api/payment/callback",
+      "auth_required": false,
+      "description": "دریافت نتیجه پرداخت از باسلام (این endpoint توسط باسلام فراخوانی می‌شود)",
+      "request": {
+        "query_params": {
+          "status": "success",
+          "hash_id": "a1b2c3d4e5f6"
+        }
+      },
+      "response": "Redirect to: https://peyvandyar.amintvk.ir/payment/callback?status=success&hash_id=a1b2c3d4e5f6",
+      "notes": "status می‌تواند success، failed یا unverified باشد"
+    },
+    {
+      "name": "Get Payment Status",
+      "method": "GET",
+      "path": "/api/payment/status/{hash_id}",
+      "auth_required": true,
+      "description": "بررسی وضعیت نهایی تراکنش پرداخت",
+      "request": {
+        "headers": {
+          "X-Encrypted-Token": "a1b2c3d4e5f6:9f8e7d6c5b4a3210..."
+        },
+        "path_params": {
+          "hash_id": "a1b2c3d4e5f6"
+        }
+      },
+      "response_example": {
+        "success": true,
+        "status": "success",
+        "hash_id": "a1b2c3d4e5f6",
+        "amount": 500000,
+        "reference_id": "ORDER-1716000000000-AB12C",
+        "message": "پرداخت با موفقیت انجام شد"
+      }
     }
   ],
   "notes": {
