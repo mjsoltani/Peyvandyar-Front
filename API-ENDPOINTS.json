@@ -464,7 +464,8 @@
         },
         "body": {
           "amount": 500000,
-          "description": "خرید اشتراک ماهانه"
+          "description": "خرید اشتراک ماهانه",
+          "callback_url": "https://peyvandyar.amintvk.ir/payment/callback"
         }
       },
       "response_example": {
@@ -476,7 +477,7 @@
         "amount": 500000,
         "total_amount": 505000
       },
-      "notes": "مبلغ به ریال است. کاربر را به pay_url redirect کنید."
+      "notes": "مبلغ به ریال است. callback_url اختیاری است و در صورت عدم ارسال، بکند از آدرس پیش‌فرض استفاده می‌کند."
     },
     {
       "name": "Payment Callback",

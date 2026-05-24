@@ -641,7 +641,14 @@ export const paymentApi = {
   createPayment: async (params: {
     amount: number; // مبلغ به ریال
     description: string;
+    callback_url?: string; // آدرس callback (اختیاری - بکند default داره)
   }) => {
+    // اگر callback_url ارسال نشده، از آدرس فعلی استفاده کن
+    const callbackUrl = params.callback_url || 
+      (typeof window !== 'undefined' 
+        ? `${window.location.origin}/payment/callback`
+        : 'https://peyvandyar.amintvk.ir/payment/callback');
+
     return apiRequest<{
       success: boolean;
       hash_id: string;
@@ -652,7 +659,11 @@ export const paymentApi = {
       total_amount: number;
     }>("/payment/create", {
       method: "POST",
-      body: JSON.stringify(params),
+      body: JSON.stringify({
+        amount: params.amount,
+        description: params.description,
+        callback_url: callbackUrl,
+      }),
     });
   },
 
