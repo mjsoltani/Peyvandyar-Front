@@ -44,7 +44,7 @@ export default function SubscriptionPage() {
     {
       id: "basic",
       name: "اشتراک پایه",
-      price: "۱۹۹,۰۰۰",
+      price: "۲۰۰,۰۰۰",
       duration: "ماهانه",
       description: "برای مدیریت محصولات",
       features: [
@@ -63,7 +63,7 @@ export default function SubscriptionPage() {
     {
       id: "complete",
       name: "اشتراک کامل",
-      price: "۲۸۵,۰۰۰",
+      price: "۳۰۰,۰۰۰",
       duration: "ماهانه",
       description: "تمام امکانات پیوندیار",
       features: [
