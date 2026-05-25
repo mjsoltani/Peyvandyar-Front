@@ -693,5 +693,27 @@ export const paymentApi = {
       error?: string;
     };
   },
+
+  /**
+   * تایید نهایی پرداخت (verify)
+   * GET /api/payment/verify?hash_id={hash_id}
+   */
+  verifyPayment: async (hashId: string) => {
+    const response = await apiRequest<any>(`/payment/verify?hash_id=${hashId}`, {
+      method: "GET",
+    });
+    
+    // Response structure: {success, status, hash_id, amount, total_amount, paid_at}
+    return response as {
+      success: boolean;
+      status?: "success" | "failed" | "pending";
+      hash_id?: string;
+      amount?: number;
+      total_amount?: number;
+      paid_at?: string;
+      message?: string;
+      error?: string;
+    };
+  },
 };
 
