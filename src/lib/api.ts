@@ -643,11 +643,8 @@ export const paymentApi = {
     description: string;
     callback_url?: string; // آدرس callback (اختیاری - بکند default داره)
   }) => {
-    // اگر callback_url ارسال نشده، از آدرس فعلی استفاده کن
-    const callbackUrl = params.callback_url || 
-      (typeof window !== 'undefined' 
-        ? `${window.location.origin}/payment/callback`
-        : 'https://peyvandyar.amintvk.ir/payment/callback');
+    // استفاده از callback URL بکند
+    const callbackUrl = params.callback_url || 'https://peyvandyar.amintvk.ir/api/payment/callback';
 
     // بکند مستقیم فیلدها رو برمی‌گردونه (بدون data wrapper)
     const response = await apiRequest<any>("/payment/create", {

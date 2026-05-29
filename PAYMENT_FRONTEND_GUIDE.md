@@ -7,7 +7,7 @@
 ۲. فرانت → POST /api/payment/create → بکند
 ۳. بکند → pay_url برمی‌گردونه
 ۴. فرانت → کاربر رو به pay_url redirect می‌کنه
-۵. کاربر پرداخت می‌کنه → باسلام → بکند (callback)
+۵. کاربر پرداخت می‌کنه → باسلام → بکند (https://peyvandyar.amintvk.ir/api/payment/callback)
 ۶. بکند وضعیت رو ذخیره می‌کنه → redirect به /payment/result
 ۷. فرانت → GET /api/payment/verify برای تایید نهایی
 ```
@@ -29,9 +29,12 @@ Body:
 ```json
 {
   "amount": 500000,
-  "description": "خرید اشتراک ماهانه"
+  "description": "خرید اشتراک ماهانه",
+  "callback_url": "https://peyvandyar.amintvk.ir/api/payment/callback"
 }
 ```
+
+> **نکته مهم:** callback_url اختیاری است. اگر ارسال نشود، بکند از URL پیش‌فرض استفاده می‌کند.
 
 > مبلغ به ریال — ۵۰۰۰۰۰ ریال = ۵۰۰۰۰ تومان
 
@@ -60,6 +63,11 @@ window.location.href = data.pay_url;
 ```
 https://peyvand-yar.ir/payment/result?status=success&hash_id=abc123
 ```
+
+**فلو:**
+1. باسلام → `https://peyvandyar.amintvk.ir/api/payment/callback` (بکند)
+2. بکند پرداخت رو verify می‌کنه
+3. بکند کاربر رو به فرانت redirect می‌کنه: `/payment/result?status=...&hash_id=...`
 
 یه صفحه `/payment/result` بساز که:
 - `status` و `hash_id` رو از URL بخونه

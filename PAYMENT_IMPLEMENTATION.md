@@ -38,13 +38,18 @@ import { paymentApi } from "@/lib/api";
 const response = await paymentApi.createPayment({
   amount: 500000,        // مبلغ به ریال (500,000 ریال = 50,000 تومان)
   description: "خرید اشتراک ماهانه",
-  callback_url: "https://peyvandyar.amintvk.ir/payment/result" // اختیاری
+  callback_url: "https://peyvandyar.amintvk.ir/api/payment/callback" // اختیاری
 });
 
 if (response.success && response.pay_url) {
   // انتقال کاربر به درگاه پرداخت
   window.location.href = response.pay_url;
 }
+```
+
+**نکته:** `callback_url` اختیاری است. اگر ارسال نشود، بکند از URL پیش‌فرض استفاده می‌کند:
+```
+https://peyvandyar.amintvk.ir/api/payment/callback
 ```
 
 **Response:**
@@ -109,10 +114,14 @@ if (response.success && response.status === "success") {
 
 **فلوچارت:**
 ```
-1. دریافت hash_id از URL
-2. نمایش loading
-3. فراخوانی paymentApi.verifyPayment(hash_id)
-4. نمایش نتیجه بر اساس response.status:
+1. کاربر پرداخت می‌کند در درگاه باسلام
+2. باسلام → بکند (https://peyvandyar.amintvk.ir/api/payment/callback)
+3. بکند پرداخت را verify می‌کند
+4. بکند → redirect به فرانت (/payment/result?status=...&hash_id=...)
+5. فرانت دریافت hash_id از URL
+6. فرانت نمایش loading
+7. فرانت فراخوانی paymentApi.verifyPayment(hash_id)
+8. فرانت نمایش نتیجه بر اساس response.status:
    - success → دکمه "ورود به داشبورد"
    - failed → دکمه "تلاش مجدد"
    - pending → پیام "در انتظار تایید"
@@ -169,6 +178,7 @@ async function handlePurchase() {
     const response = await paymentApi.createPayment({
       amount: 500000, // 50,000 تومان
       description: "خرید اشتراک ماهانه"
+      // callback_url اختیاری - بکند از URL پیش‌فرض استفاده می‌کند
     });
 
     if (response.success && response.pay_url) {
@@ -184,8 +194,8 @@ async function handlePurchase() {
 }
 
 // 3. کاربر پرداخت می‌کند
-// 4. باسلام → بکند (callback)
-// 5. بکند → redirect به /payment/result?status=success&hash_id=abc123
+// 4. باسلام → بکند (https://peyvandyar.amintvk.ir/api/payment/callback)
+// 5. بکند verify می‌کند و redirect می‌کند به /payment/result?status=success&hash_id=abc123
 
 // 6. صفحه /payment/result به صورت خودکار verify می‌زند
 useEffect(() => {
