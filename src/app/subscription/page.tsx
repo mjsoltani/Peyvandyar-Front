@@ -18,10 +18,16 @@ const navItems = [
 ];
 
 export default function SubscriptionPage() {
-  const [selectedPlan, setSelectedPlan] = useState<{name: string, price: string} | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<{
+    name: string;
+    price: string;
+    planId: "monthly" | "biweekly";
+  } | null>(null);
+  
   const plans = [
     {
       id: "trial",
+      planId: null,
       name: "دوره آزمایشی",
       price: "رایگان",
       duration: "۷ روز",
@@ -42,29 +48,29 @@ export default function SubscriptionPage() {
       disabledText: "فقط برای کاربران جدید",
     },
     {
-      id: "basic",
-      name: "اشتراک پایه",
+      id: "biweekly",
+      planId: "biweekly" as const,
+      name: "اشتراک دو هفته‌ای",
       price: "۲۰۰,۰۰۰",
-      duration: "ماهانه",
-      description: "برای مدیریت محصولات",
+      duration: "۱۵ روز",
+      description: "برای شروع سریع",
       features: [
+        "کپی محصول",
         "ویرایش انبوه محصولات",
         "مدیریت محصولات",
         "پشتیبانی استاندارد",
       ],
-      notIncluded: [
-        "کپی محصول",
-        "پشتیبانی ۲۴ ساعته",
-      ],
-      buttonText: "خرید اشتراک پایه",
+      notIncluded: [],
+      buttonText: "خرید اشتراک دو هفته‌ای",
       buttonColor: "bg-orange-500 hover:bg-orange-600",
       popular: false,
     },
     {
-      id: "complete",
-      name: "اشتراک کامل",
+      id: "monthly",
+      planId: "monthly" as const,
+      name: "اشتراک ماهانه",
       price: "۳۰۰,۰۰۰",
-      duration: "ماهانه",
+      duration: "۳۰ روز",
       description: "تمام امکانات پیوندیار",
       features: [
         "کپی محصول",
@@ -73,7 +79,7 @@ export default function SubscriptionPage() {
         "پشتیبانی ۲۴ ساعته",
       ],
       notIncluded: [],
-      buttonText: "خرید اشتراک کامل",
+      buttonText: "خرید اشتراک ماهانه",
       buttonColor: "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700",
       popular: true,
     },
@@ -224,7 +230,11 @@ export default function SubscriptionPage() {
                     </div>
                   ) : (
                     <button
-                      onClick={() => setSelectedPlan({name: plan.name, price: plan.price})}
+                      onClick={() => setSelectedPlan({
+                        name: plan.name,
+                        price: plan.price,
+                        planId: plan.planId!
+                      })}
                       className={`w-full px-6 py-3 text-white rounded-xl font-bold transition-all duration-300 hover:shadow-lg ${plan.buttonColor}`}
                     >
                       {plan.buttonText}
@@ -275,6 +285,7 @@ export default function SubscriptionPage() {
         onClose={() => setSelectedPlan(null)}
         planName={selectedPlan?.name || ""}
         price={selectedPlan?.price || ""}
+        planId={selectedPlan?.planId || "monthly"}
       />
 
       <Footer />

@@ -635,12 +635,31 @@ export const adminApi = {
 // Payment API
 export const paymentApi = {
   /**
+   * پلن‌های اشتراک موجود
+   */
+  plans: {
+    monthly: {
+      id: "monthly" as const,
+      name: "اشتراک ماهانه",
+      price: 300000, // تومان
+      duration: 30, // روز
+      description: "دسترسی کامل به تمام امکانات برای 30 روز",
+    },
+    biweekly: {
+      id: "biweekly" as const,
+      name: "اشتراک دو هفته‌ای",
+      price: 200000, // تومان
+      duration: 15, // روز
+      description: "دسترسی کامل به تمام امکانات برای 15 روز",
+    },
+  },
+
+  /**
    * ایجاد پیش‌تراکنش پرداخت
    * POST /api/payment/create
    */
   createPayment: async (params: {
-    amount: number; // مبلغ به ریال
-    description: string;
+    plan_id: "monthly" | "biweekly"; // شناسه پلن
     callback_url?: string; // آدرس callback (اختیاری - بکند default داره)
   }) => {
     // استفاده از callback URL بکند
@@ -650,19 +669,19 @@ export const paymentApi = {
     const response = await apiRequest<any>("/payment/create", {
       method: "POST",
       body: JSON.stringify({
-        amount: params.amount,
-        description: params.description,
+        plan_id: params.plan_id,
         callback_url: callbackUrl,
       }),
     });
     
-    // Response structure: {success, hash_id, pay_url, reference_id, expired_at, amount, total_amount}
+    // Response structure: {success, hash_id, pay_url, reference_id, expired_at, plan_id, amount, total_amount}
     return response as {
       success: boolean;
       hash_id?: string;
       pay_url?: string;
       reference_id?: string;
       expired_at?: string;
+      plan_id?: string;
       amount?: number;
       total_amount?: number;
       error?: string;

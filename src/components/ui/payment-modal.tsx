@@ -11,6 +11,7 @@ interface PaymentModalProps {
   onClose: () => void;
   planName: string;
   price: string;
+  planId: "monthly" | "biweekly"; // اضافه شدن plan_id
 }
 
 export function PaymentModal({
@@ -18,21 +19,10 @@ export function PaymentModal({
   onClose,
   planName,
   price,
+  planId,
 }: PaymentModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // تابع تبدیل اعداد فارسی به انگلیسی
-  const convertPersianToEnglish = (str: string): string => {
-    const persianNumbers = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-    const englishNumbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-    
-    let result = str;
-    for (let i = 0; i < 10; i++) {
-      result = result.replace(new RegExp(persianNumbers[i], 'g'), englishNumbers[i]);
-    }
-    return result;
-  };
 
   const handlePayment = async () => {
     try {
@@ -46,31 +36,15 @@ export function PaymentModal({
         return;
       }
 
-      // تبدیل قیمت از فارسی به انگلیسی و حذف کاما
-      const priceEnglish = convertPersianToEnglish(price);
-      const priceNumber = parseInt(priceEnglish.replace(/,/g, ""));
-      
-      // بررسی اینکه عدد معتبر است
-      if (isNaN(priceNumber) || priceNumber <= 0) {
-        setError("قیمت نامعتبر است");
-        return;
-      }
-      
-      // تبدیل قیمت از تومان به ریال (ضرب در 10)
-      const amountInRial = priceNumber * 10;
-
       console.log("Payment request:", {
-        amount: amountInRial,
-        description: `خرید ${planName}`,
-        priceOriginal: price,
-        priceEnglish,
-        priceNumber,
+        plan_id: planId,
+        planName,
+        price,
       });
 
-      // ایجاد پیش‌تراکنش
+      // ایجاد پیش‌تراکنش با plan_id
       const response = await paymentApi.createPayment({
-        amount: amountInRial,
-        description: `خرید ${planName}`,
+        plan_id: planId,
       });
 
       console.log("Payment response:", response);
