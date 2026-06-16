@@ -69,25 +69,22 @@ export default function CampaignLandingPage() {
   useEffect(() => {
     // توکن فقط سمت کلاینت از کوکی خوانده می‌شود؛ محاسبه در render باعث
     // hydration mismatch می‌شود، پس عمداً بعد از mount مقداردهی می‌کنیم.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCtaHref(getAuthToken() ? "/dashboard" : BASALAM_SSO_URL);
-
-    // ذخیره UTM parameters برای analytics (پیامک / تلگرام / ایتا)
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const utm: Record<string, string> = {};
-      ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"].forEach(
-        (key) => {
-          const val = params.get(key);
-          if (val) utm[key] = val;
-        }
+    let href: string;
+    if (getAuthToken()) {
+      href = "/dashboard";
+    } else {
+      // منبع ترافیک از لینک کمپین (مثلاً ?src=sms از پیامک). پیش‌فرض: direct
+      const src =
+        new URLSearchParams(window.location.search).get("src") || "direct";
+      // مقدار src جایگزین state در لینک SSO باسلام می‌شود تا بعد از callback
+      // به بک‌اند برسد و منبع ثبت‌نام کاربر مشخص شود.
+      href = BASALAM_SSO_URL.replace(
+        /([?&]state=)[^&]*/,
+        `$1${encodeURIComponent(src)}`
       );
-      if (Object.keys(utm).length > 0) {
-        localStorage.setItem("peyvandyar_utm", JSON.stringify(utm));
-      }
-    } catch {
-      // localStorage در دسترس نبود — نادیده بگیر
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCtaHref(href);
   }, []);
 
   return (
