@@ -171,8 +171,8 @@ export default function CampaignLandingPage() {
         <div className="flex justify-around border-b border-[#F0EDE8] bg-white px-6 py-[18px]">
           {[
             { value: "۱۰۰۰+", label: "کاربر فعال" },
-            { value: "۳۱۰۰+", label: "کپی انجام‌شده" },
-            { value: "۱۵۰۰+", label: "محصول مدیریت شده" },
+            { value: "۲۰۰۰۰+", label: "کپی انجام‌شده" },
+            { value: "۵۰۰٬۰۰۰+", label: "محصول مدیریت شده" },
           ].map((stat, i, arr) => (
             <div key={stat.label} className="flex items-stretch">
               <div className="text-center">
