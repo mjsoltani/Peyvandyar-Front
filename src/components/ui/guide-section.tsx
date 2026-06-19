@@ -3,39 +3,31 @@
 import { motion } from "framer-motion";
 import {
   Copy,
-  Edit3,
-  Zap,
-  CheckCircle,
+  LogIn,
+  PackageSearch,
 } from "lucide-react";
 
 export function GuideSection() {
   const steps = [
     {
       number: "۱",
-      title: "ورود به سیستم",
-      description: "با حساب باسلام خود وارد پیوندیار شوید",
-      icon: <CheckCircle className="w-6 h-6" />,
+      title: "ورود با باسلام",
+      description: "با یک کلیک روی «وارد شوید با باسلام» وارد پیوندیار شوید",
+      icon: <LogIn className="w-6 h-6" />,
       color: "from-blue-500 to-blue-600",
     },
     {
       number: "۲",
-      title: "کپی محصول",
-      description: "محصولات را از فروشگاه‌های دیگر کپی کنید",
-      icon: <Copy className="w-6 h-6" />,
+      title: "انتخاب محصول",
+      description: "از میان محصولاتی که داخل باسلام هستند، لینک آن‌ها را کپی کنید و در بخش کپی محصول پیوندیار قرار دهید",
+      icon: <PackageSearch className="w-6 h-6" />,
       color: "from-purple-500 to-purple-600",
     },
     {
       number: "۳",
-      title: "ویرایش انبوه",
-      description: "قیمت‌ها، موجودی و اطلاعات را به صورت دسته‌ای تغییر دهید",
-      icon: <Edit3 className="w-6 h-6" />,
-      color: "from-orange-500 to-orange-600",
-    },
-    {
-      number: "۴",
-      title: "ذخیره و انتشار",
-      description: "تغییرات به صورت خودکار در باسلام ذخیره می‌شوند",
-      icon: <Zap className="w-6 h-6" />,
+      title: "کپی محصول با موفقیت انجام شد",
+      description: "کپی محصول شما با موفقیت انجام شد. اکنون می‌توانید غرفه خودتان را در باسلام چک کنید؛ محصول با موفقیت به غرفه شما اضافه شده است",
+      icon: <Copy className="w-6 h-6" />,
       color: "from-green-500 to-green-600",
     },
   ];
@@ -92,12 +84,12 @@ export function GuideSection() {
             viewport={{ once: true }}
             className="text-base sm:text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed"
           >
-            پیوندیار را در ۴ مرحله ساده شروع کنید و محصولات خود را بهتر مدیریت کنید
+            تنها در ۳ مرحله ساده اولین محصول خود را کپی کنید و کار را شروع کنید
           </motion.p>
         </div>
 
         {/* Steps */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {steps.map((step, index) => (
             <motion.div
               key={index}
@@ -110,7 +102,7 @@ export function GuideSection() {
             >
               {/* Connector Line */}
               {index < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-20 -right-6 w-12 h-0.5 bg-gradient-to-r from-orange-400 to-transparent" />
+                <div className="hidden md:block absolute top-20 -right-6 w-12 h-0.5 bg-gradient-to-r from-orange-400 to-transparent" />
               )}
 
               <div className="bg-white rounded-xl border border-slate-200 p-6 h-full hover:shadow-lg hover:border-orange-200 transition-all duration-300">
