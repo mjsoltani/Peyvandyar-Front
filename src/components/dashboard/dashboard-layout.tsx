@@ -13,6 +13,7 @@ import {
   Copy,
 } from "lucide-react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
+import { SubscriptionStatus } from "@/components/dashboard/subscription-status";
 import Link from "next/link";
 
 // لوگوی پیوندیار
@@ -149,7 +150,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               ))}
             </div>
           </div>
-          <div>
+          <div className="flex flex-col gap-2">
+            <SubscriptionStatus open={open} />
             <SidebarLink
               link={{
                 label: "خروج",
