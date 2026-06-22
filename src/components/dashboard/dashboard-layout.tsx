@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { removeAuthToken } from "@/lib/auth";
 import { motion } from "framer-motion";
-import { 
-  LayoutDashboard, 
-  Package, 
+import {
+  LayoutDashboard,
+  Package,
   Headphones,
   LogOut,
   FileText,
   Copy,
+  UserCircle,
 } from "lucide-react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { SubscriptionStatus } from "@/components/dashboard/subscription-status";
@@ -134,6 +135,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/dashboard/support",
       icon: (
         <Headphones className="text-slate-700 h-5 w-5 flex-shrink-0" />
+      ),
+    },
+    {
+      label: "پروفایل",
+      href: "/dashboard/profile",
+      icon: (
+        <UserCircle className="text-slate-700 h-5 w-5 flex-shrink-0" />
       ),
     },
   ];
