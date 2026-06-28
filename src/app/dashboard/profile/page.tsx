@@ -125,10 +125,10 @@ export default function ProfilePage() {
       setProfileLoading(true);
       setProfileError(null);
       const res = await userApi.getProfile();
-      if (res?.user) {
-        setProfile(res.user);
-      } else if (res?.success && res?.data?.user) {
+      if (res?.success && res?.data?.user) {
         setProfile(res.data.user);
+      } else if (res?.success && res?.data) {
+        setProfile(res.data);
       } else {
         throw new Error("اطلاعات پروفایل دریافت نشد");
       }
