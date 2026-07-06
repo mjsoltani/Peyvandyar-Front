@@ -25,6 +25,10 @@
 .DS_Store
 *.pem
 
+# markdown docs (backend communication files - kept locally, not committed)
+*.md
+!README.md
+
 # local tooling (preview server config)
 /.claude
 
