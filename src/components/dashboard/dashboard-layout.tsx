@@ -12,6 +12,7 @@ import {
   FileText,
   Copy,
   UserCircle,
+  RefreshCw,
 } from "lucide-react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { SubscriptionStatus } from "@/components/dashboard/subscription-status";
@@ -128,6 +129,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/dashboard/copy-product",
       icon: (
         <Copy className="text-slate-700 h-5 w-5 flex-shrink-0" />
+      ),
+    },
+    {
+      label: "سینک غرفه‌ها",
+      href: "/dashboard/sync-stores",
+      icon: (
+        <RefreshCw className="text-slate-700 h-5 w-5 flex-shrink-0" />
       ),
     },
     {

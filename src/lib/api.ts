@@ -25,7 +25,9 @@ export class ApiError extends Error {
     message: string,
     public statusCode?: number,
     public isAuthError: boolean = false,
-    public isSubscriptionExpired: boolean = false
+    public isSubscriptionExpired: boolean = false,
+    public code?: string,
+    public retryAfter?: number
   ) {
     super(message);
     this.name = 'ApiError';
@@ -96,11 +98,15 @@ async function apiRequest<T>(
       let errorMessage = `HTTP error! status: ${response.status}`;
       const isAuthError = response.status === 401 || response.status === 403;
       let isSubscriptionExpired = false;
-      
+      let errorCode: string | undefined;
+      let retryAfter: number | undefined;
+
       try {
         const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
-        
+        errorMessage = errorData.message || errorData.error || errorData.reason || errorMessage;
+        errorCode = errorData.code;
+        retryAfter = errorData.retryAfter;
+
         // چک کردن subscription expired
         if (errorData.error === "subscription_expired") {
           isSubscriptionExpired = true;
@@ -110,13 +116,13 @@ async function apiRequest<T>(
         // اگر response JSON نبود، از status text استفاده کن
         errorMessage = response.statusText || errorMessage;
       }
-      
+
       // برای خطاهای احراز هویت، پیغام مناسب‌تر
       if (isAuthError && !isSubscriptionExpired) {
         errorMessage = "دسترسی غیرمجاز - لطفا مجددا وارد شوید";
       }
-      
-      throw new ApiError(errorMessage, response.status, isAuthError, isSubscriptionExpired);
+
+      throw new ApiError(errorMessage, response.status, isAuthError, isSubscriptionExpired, errorCode, retryAfter);
     }
 
     // چک کردن که response خالی نباشد
@@ -318,6 +324,68 @@ export const productsApi = {
       method: "POST",
       body
     });
+  },
+
+  /**
+   * کپی همه محصولات یک وندور مبدأ به یک وندور مقصد
+   * POST /api/products/copy-vendor-products
+   * توکن‌ها hashed token هستند (نه JWT خام). برای تعداد زیاد محصول
+   * ممکن است پردازش async شود و jobId برگردد — با syncBoothsApi.getJobStatus پیگیری شود.
+   */
+  copyVendorProducts: async (params: {
+    sourceVendorToken: string;
+    sourceVendorId: string;
+    targetVendorToken: string;
+    targetVendorId: string;
+    maxProducts?: number; // پیش‌فرض 100، حداکثر 1000
+  }) => {
+    const response = await apiRequest<any>("/products/copy-vendor-products", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+    return response as {
+      success: boolean;
+      jobId?: string;
+      message?: string;
+      error?: string;
+      [key: string]: unknown;
+    };
+  },
+
+  /**
+   * کپی لیست انتخابی از محصولات به یک وندور مقصد
+   * POST /api/products/copy-selected
+   * پردازش سینک است (نه job) — برای تعداد زیاد محصول ممکن است request طول بکشد.
+   */
+  copySelectedProducts: async (params: {
+    productIds: string[];
+    targetVendorId: string;
+    targetVendorToken: string;
+  }) => {
+    const response = await apiRequest<any>("/products/copy-selected", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+    return response as {
+      success: boolean;
+      message?: string;
+      target_vendor_id?: string;
+      total_products_requested?: number;
+      products_copied?: number;
+      products_failed?: number;
+      results?: Array<{
+        original_product_id: string;
+        new_product_id: number;
+        success: boolean;
+        name?: string;
+      }>;
+      summary?: {
+        success_rate: string;
+        successful_copies: number;
+        failed_copies: number;
+      };
+      error?: string;
+    };
   },
 
   /**
@@ -718,7 +786,7 @@ export const paymentApi = {
     const response = await apiRequest<any>(`/payment/verify?hash_id=${hashId}`, {
       method: "GET",
     });
-    
+
     // Response structure: {success, status, hash_id, amount, total_amount, paid_at}
     return response as {
       success: boolean;
@@ -729,6 +797,166 @@ export const paymentApi = {
       paid_at?: string;
       message?: string;
       error?: string;
+    };
+  },
+};
+
+// Sync Booths API — اتصال غرفه فرزند با شماره تلفن و سینک محصولات (EMJ-24)
+export interface ChildVendorInfo {
+  vendor_id: string;
+  vendor_title: string;
+  vendor_identifier?: string;
+  username?: string;
+}
+
+export interface SyncStatistics {
+  total_syncs: number;
+  successful_syncs: number;
+  failed_syncs: number;
+  success_rate: string;
+  last_sync_at: string | null;
+  synced_products_count: number;
+  last_24h?: {
+    total_syncs: number;
+    successful_syncs: number;
+    failed_syncs: number;
+  };
+}
+
+export interface RecentSyncActivity {
+  product_name: string;
+  status: string;
+  error_message: string | null;
+  created_at: string;
+  time_ago: string;
+}
+
+export interface ChildStore {
+  relation_id: number;
+  child_vendor_id: string;
+  child_vendor_info?: ChildVendorInfo;
+  sync_rules?: Record<string, unknown>;
+  status: string;
+  created_at: string;
+  relationship_age_days: number;
+  sync_statistics?: SyncStatistics;
+  recent_sync_activity?: RecentSyncActivity[];
+  sync_health?: {
+    status: string;
+    last_activity: string;
+  };
+}
+
+export const syncBoothsApi = {
+  /**
+   * شروع اتصال غرفه فرزند — ارسال کد تایید به شماره تلفن
+   * POST /api/sync-booths/initiate
+   */
+  initiate: async (phoneNumber: string) => {
+    const response = await apiRequest<any>("/sync-booths/initiate", {
+      method: "POST",
+      body: JSON.stringify({ phoneNumber }),
+    });
+    return response as { success: boolean; maskedPhone?: string; error?: string };
+  },
+
+  /**
+   * تایید کد و اتصال غرفه به‌عنوان فرزند
+   * POST /api/sync-booths/confirm
+   */
+  confirm: async (phoneNumber: string, code: string) => {
+    const response = await apiRequest<any>("/sync-booths/confirm", {
+      method: "POST",
+      body: JSON.stringify({ phoneNumber, code }),
+    });
+    return response as {
+      success: boolean;
+      relationId?: number;
+      childVendor?: { vendorId: string; title: string };
+      initialSyncJobId?: string;
+      error?: string;
+    };
+  },
+
+  /**
+   * لیست کامل غرفه‌های فرزند با آمار سینک
+   * GET /api/parent-child/children/:parentVendorId
+   */
+  getChildren: async (parentVendorId: number | string) => {
+    const response = await apiRequest<any>(`/parent-child/children/${parentVendorId}`, {
+      method: "GET",
+    });
+    return response as {
+      success: boolean;
+      parent_vendor_id?: string;
+      parent_vendor_info?: ChildVendorInfo;
+      children?: ChildStore[];
+      overall_statistics?: Record<string, unknown>;
+      error?: string;
+    };
+  },
+
+  /**
+   * وضعیت سریع سینک
+   * GET /api/parent-child/status/:parentVendorId
+   */
+  getStatus: async (parentVendorId: number | string) => {
+    return apiRequest<any>(`/parent-child/status/${parentVendorId}`, {
+      method: "GET",
+    });
+  },
+
+  /**
+   * فعالیت اخیر سینک با آمار کامل
+   * GET /api/parent-child/activity/:parentVendorId?hours=24&limit=100
+   */
+  getActivity: async (
+    parentVendorId: number | string,
+    params?: { hours?: number; limit?: number }
+  ) => {
+    const queryParams = new URLSearchParams();
+    if (params?.hours) queryParams.append("hours", params.hours.toString());
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    const query = queryParams.toString();
+    return apiRequest<any>(
+      `/parent-child/activity/${parentVendorId}${query ? `?${query}` : ""}`,
+      { method: "GET" }
+    );
+  },
+
+  /**
+   * لاگ‌های زنده سینک (۲۰ مورد آخر)
+   * GET /api/parent-child/live-logs/:parentVendorId
+   */
+  getLiveLogs: async (parentVendorId: number | string) => {
+    return apiRequest<any>(`/parent-child/live-logs/${parentVendorId}`, {
+      method: "GET",
+    });
+  },
+
+  /**
+   * حذف یک غرفه فرزند
+   * DELETE /api/parent-child/remove-child/:relationId
+   */
+  removeChild: async (relationId: number) => {
+    return apiRequest<any>(`/parent-child/remove-child/${relationId}`, {
+      method: "DELETE",
+    });
+  },
+
+  /**
+   * پیگیری وضعیت job های async (کپی اولیه محصولات)
+   * GET /api/jobs/:jobId/status
+   */
+  getJobStatus: async (jobId: string) => {
+    const response = await apiRequest<any>(`/jobs/${jobId}/status`, {
+      method: "GET",
+    });
+    return response as {
+      success?: boolean;
+      status?: string;
+      progress?: number;
+      [key: string]: unknown;
     };
   },
 };
