@@ -39,6 +39,25 @@ interface TrialStatus {
   status: "active" | "premium" | "expired";
 }
 
+interface SubscriptionInfo {
+  status: string;
+  subscription_type: string;
+  access_level: string;
+  can_use_api: boolean;
+  is_active: boolean;
+  expires_at: string;
+  is_expired: boolean;
+  remaining: {
+    days: number;
+    hours: number;
+    milliseconds: number;
+  };
+  display: {
+    status_text: string;
+    remaining_text: string;
+  };
+}
+
 function toJalali(isoDate: string): string {
   try {
     return new Intl.DateTimeFormat("fa-IR", {
@@ -147,7 +166,31 @@ export default function ProfilePage() {
       setTrialLoading(true);
       setTrialError(null);
       const res = await apiClient.get<any>("/trial/status");
-      if (res?.trial) {
+      
+      // بررسی ساختار جدید با subscription
+      if (res?.success && res?.subscription) {
+        const sub = res.subscription;
+        // تبدیل ساختار جدید به ساختار قدیمی برای سازگاری با UI
+        const trialData: TrialStatus = {
+          expires_at: sub.expires_at,
+          remaining_days: sub.remaining?.days || 0,
+          remaining_hours: Math.floor((sub.remaining?.hours || 0) % 24),
+          is_expired: sub.is_expired || false,
+          status: sub.is_expired ? "expired" : sub.subscription_type === "premium" ? "premium" : "active"
+        };
+        setTrial(trialData);
+        
+        // به‌روزرسانی اطلاعات کاربر اگر در response وجود دارد
+        if (res?.user && !profile?.phoneNumber) {
+          setProfile((prev) =>
+            prev
+              ? { ...prev, phoneNumber: res.user.phoneNumber, isActive: res.user.isActive }
+              : prev
+          );
+        }
+      } 
+      // سازگاری با ساختار قدیمی (fallback)
+      else if (res?.trial) {
         setTrial(res.trial);
         if (res?.user && !profile?.phoneNumber) {
           setProfile((prev) =>
