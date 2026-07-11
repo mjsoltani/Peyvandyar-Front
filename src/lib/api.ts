@@ -6,6 +6,7 @@ const API_BASE_URL = "https://peyvandyar.amintvk.ir/api";
 interface ApiResponse<T> {
   success: boolean;
   data?: T;
+  user?: any; // برخی APIها مستقیماً user را در root برمی‌گردانند
   message?: string;
   error?: string;
   pagination?: {

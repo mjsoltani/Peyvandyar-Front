@@ -125,7 +125,10 @@ export default function ProfilePage() {
       setProfileLoading(true);
       setProfileError(null);
       const res = await userApi.getProfile();
-      if (res?.success && res?.data?.user) {
+      // API مستقیماً user را در root response برمی‌گرداند
+      if (res?.success && res?.user) {
+        setProfile(res.user);
+      } else if (res?.success && res?.data?.user) {
         setProfile(res.data.user);
       } else if (res?.success && res?.data) {
         setProfile(res.data);
