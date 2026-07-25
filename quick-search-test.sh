@@ -3,7 +3,7 @@
 # تست سریع API جستجو
 # استفاده: ./quick-search-test.sh YOUR_TOKEN
 
-API_BASE_URL="https://peyvandyar.amintvk.ir/api"
+API_BASE_URL="https://api.peyvand-yar.ir"
 TOKEN="$1"
 
 if [ -z "$TOKEN" ]; then

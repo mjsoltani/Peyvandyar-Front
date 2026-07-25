@@ -90,7 +90,7 @@ function AuthCallbackContent() {
       setMessage("در حال تأیید با باسلام...");
       
       // Fetch از بکند برای گرفتن توکن
-      fetch(`https://peyvandyar.amintvk.ir/api/webhook/oauth?code=${code}&state=${searchParams.get("state") || ""}`)
+      fetch(`https://api.peyvand-yar.ir/webhook/oauth?code=${code}&state=${searchParams.get("state") || ""}`)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.encrypted_token) {

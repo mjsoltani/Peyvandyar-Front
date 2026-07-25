@@ -65,7 +65,7 @@ export default function MohammadianDashboard() {
     const fetchUserData = async () => {
       try {
         // Fetch parent data
-        const response = await fetch('https://peyvandyar.amintvk.ir/api/me', {
+        const response = await fetch('https://api.peyvand-yar.ir/me', {
           headers: {
             'Authorization': `Bearer ${parentToken}`,
             'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ export default function MohammadianDashboard() {
         // Fetch children list
         if (data.success && data.user && data.user.basalam_vendor_id) {
           const childrenResponse = await fetch(
-            `https://peyvandyar.amintvk.ir/api/parent-child/children/${data.user.basalam_vendor_id}`,
+            `https://api.peyvand-yar.ir/parent-child/children/${data.user.basalam_vendor_id}`,
             {
               headers: {
                 'Authorization': `Bearer ${parentToken}`,
@@ -135,7 +135,7 @@ export default function MohammadianDashboard() {
 
     try {
       // First, fetch child info with their token to get childVendorId
-      const childInfoResponse = await fetch('https://peyvandyar.amintvk.ir/api/auth/me-raw', {
+      const childInfoResponse = await fetch('https://api.peyvand-yar.ir/auth/me-raw', {
         headers: {
           'Authorization': `Bearer ${childToken}`,
           'Content-Type': 'application/json',
@@ -159,7 +159,7 @@ export default function MohammadianDashboard() {
       }
 
       // Now add the child with complete payload
-      const addResponse = await fetch('https://peyvandyar.amintvk.ir/api/parent-child/add-child', {
+      const addResponse = await fetch('https://api.peyvand-yar.ir/parent-child/add-child', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${parentToken}`,
@@ -189,7 +189,7 @@ export default function MohammadianDashboard() {
 
       // Success - refresh the children list to get updated info
       const childrenResponse = await fetch(
-        `https://peyvandyar.amintvk.ir/api/parent-child/children/${userData?.user.basalam_vendor_id}`,
+        `https://api.peyvand-yar.ir/parent-child/children/${userData?.user.basalam_vendor_id}`,
         {
           headers: {
             'Authorization': `Bearer ${parentToken}`,

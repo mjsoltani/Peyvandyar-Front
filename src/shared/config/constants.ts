@@ -26,4 +26,4 @@ export const ROUTES = {
 } as const;
 
 export const BASALAM_SSO_URL = 
-  'https://basalam.com/accounts/sso?client_id=1119&scope=vendor.profile.read%20vendor.product.write%20customer.profile.read&redirect_uri=https://peyvandyar.amintvk.ir/api/webhook/oauth&state=amin';
+  'https://basalam.com/accounts/sso?client_id=1119&scope=vendor.profile.read%20vendor.product.write%20customer.profile.read&redirect_uri=https://api.peyvand-yar.ir/webhook/oauth&state=amin';

@@ -12,7 +12,7 @@
  * node test-search-api.js "a1b2c3d4e5f6:9f8e7d6c5b4a3210..."
  */
 
-const API_BASE_URL = "https://peyvandyar.amintvk.ir/api";
+const API_BASE_URL = "https://api.peyvand-yar.ir";
 
 // رنگ‌ها برای خروجی
 const colors = {

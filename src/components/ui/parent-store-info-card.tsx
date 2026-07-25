@@ -34,7 +34,7 @@ export function ParentStoreInfoCard() {
           throw new Error('توکن احراز هویت یافت نشد');
         }
 
-        const response = await fetch('https://peyvandyar.amintvk.ir/api/me', {
+        const response = await fetch('https://api.peyvand-yar.ir/me', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
