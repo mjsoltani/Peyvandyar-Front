@@ -1,7 +1,7 @@
 // API service for Peyvandyar backend
 import { getAuthToken } from "./auth";
 
-const API_BASE_URL = "https://api.peyvand-yar.ir";
+const API_BASE_URL = "https://api.peyvand-yar.ir/api";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -732,7 +732,7 @@ export const paymentApi = {
     callback_url?: string; // آدرس callback (اختیاری - بکند default داره)
   }) => {
     // استفاده از callback URL بکند
-    const callbackUrl = params.callback_url || 'https://api.peyvand-yar.ir/payment/callback';
+    const callbackUrl = params.callback_url || 'https://api.peyvand-yar.ir/api/payment/callback';
 
     // بکند مستقیم فیلدها رو برمی‌گردونه (بدون data wrapper)
     const response = await apiRequest<any>("/payment/create", {

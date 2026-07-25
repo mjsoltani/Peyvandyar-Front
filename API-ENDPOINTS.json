@@ -1,5 +1,5 @@
 {
-  "base_url": "https://api.peyvand-yar.ir",
+  "base_url": "https://api.peyvand-yar.ir/api",
   "authentication": {
     "type": "Encrypted Token",
     "header": "X-Encrypted-Token",
@@ -45,7 +45,7 @@
           "code": "def5020049ed0b3c7b1e6518893ba2593af458d47e60b73291b62f16...",
           "client_id": "1119",
           "client_secret": "BpHe6QJb9sEQD4Qb1zwLqZxlFYlcRSlIpm5OwPm4",
-          "redirect_uri": "https://api.peyvand-yar.ir/webhook/oauth",
+          "redirect_uri": "https://api.peyvand-yar.ir/api/webhook/oauth",
           "username": "admin"
         }
       },
@@ -465,7 +465,7 @@
         "body": {
           "amount": 500000,
           "description": "خرید اشتراک ماهانه",
-          "callback_url": "https://api.peyvand-yar.ir/payment/callback"
+          "callback_url": "https://api.peyvand-yar.ir/api/payment/callback"
         }
       },
       "response_example": {

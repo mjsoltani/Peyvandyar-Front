@@ -55,7 +55,7 @@ export default function StoreDetailsPage() {
       }
 
       const response = await fetch(
-        `https://api.peyvand-yar.ir/products?page=${currentPage}&per_page=10`,
+        `https://api.peyvand-yar.ir/api/products?page=${currentPage}&per_page=10`,
         {
           headers: {
             'accept': '*/*',
@@ -703,7 +703,7 @@ function EditProductModal({ product, onClose, onSuccess }: { product: Product; o
       }
 
       const response = await fetch(
-        `https://api.peyvand-yar.ir/products/${product.id}`,
+        `https://api.peyvand-yar.ir/api/products/${product.id}`,
         {
           headers: {
             'accept': '*/*',
@@ -770,7 +770,7 @@ function EditProductModal({ product, onClose, onSuccess }: { product: Product; o
       }
 
       const response = await fetch(
-        `https://api.peyvand-yar.ir/products/${product.id}`,
+        `https://api.peyvand-yar.ir/api/products/${product.id}`,
         {
           method: 'PUT',
           headers: {

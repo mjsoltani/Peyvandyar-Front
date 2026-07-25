@@ -37,7 +37,7 @@ export function ChildStoresListCard() {
         }
 
         // First get parent vendor ID
-        const meResponse = await fetch('https://api.peyvand-yar.ir/me', {
+        const meResponse = await fetch('https://api.peyvand-yar.ir/api/me', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ export function ChildStoresListCard() {
         setParentVendorId(vendorId);
 
         // Then get children
-        const childrenResponse = await fetch(`https://api.peyvand-yar.ir/parent-child/children/${vendorId}`, {
+        const childrenResponse = await fetch(`https://api.peyvand-yar.ir/api/parent-child/children/${vendorId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
