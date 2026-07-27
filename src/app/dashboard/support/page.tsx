@@ -131,12 +131,12 @@ export default function SupportPage() {
               <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
                 <MessageSquare className="w-6 h-6 text-blue-500" />
               </div>
-              <h3 className="font-bold text-slate-800 mb-2">تلگرام</h3>
+              <h3 className="font-bold text-slate-800 mb-2">بله</h3>
               <p className="text-slate-600 text-sm mb-4">
-                پشتیبانی سریع از طریق تلگرام
+                پشتیبانی سریع از طریق بله
               </p>
               <a
-                href="https://t.me/mjsoltani2001"
+                href="https://ble.ir/mjsoltani2001"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-500 hover:text-blue-600 font-medium flex items-center gap-2"

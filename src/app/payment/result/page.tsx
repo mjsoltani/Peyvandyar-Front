@@ -239,7 +239,7 @@ function PaymentResultContent() {
                     <br />
                     با پشتیبانی تماس بگیرید:{" "}
                     <a
-                      href="https://t.me/mjsoltani2001"
+                      href="https://ble.ir/mjsoltani2001"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline font-semibold hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
