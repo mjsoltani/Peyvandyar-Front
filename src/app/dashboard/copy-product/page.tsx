@@ -51,6 +51,9 @@ export default function CopyProductPage() {
       title: "اضافه کردن از دیجی‌کالا",
       description: "ایمپورت تک‌محصول یا غرفه دیجی‌کالا و سینک قیمت/موجودی",
       icon: Store,
+      isActive: true,
+      comingSoon: false,
+      route: "/dashboard/copy-product/digikala",
     },
     {
       id: "mixi",
