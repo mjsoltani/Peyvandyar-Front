@@ -11,6 +11,7 @@ import {
   FileSpreadsheet,
   Clock,
   ArrowRight,
+  Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +45,12 @@ export default function CopyProductPage() {
       isActive: true,
       comingSoon: false,
       route: "/dashboard/copy-product/basalam",
+    },
+    {
+      id: "digikala",
+      title: "اضافه کردن از دیجی‌کالا",
+      description: "ایمپورت تک‌محصول یا غرفه دیجی‌کالا و سینک قیمت/موجودی",
+      icon: Store,
     },
     {
       id: "mixi",

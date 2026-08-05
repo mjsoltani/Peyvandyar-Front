@@ -13,6 +13,7 @@ import {
   Copy,
   UserCircle,
   RefreshCw,
+  ShoppingBag,
 } from "lucide-react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { SubscriptionStatus } from "@/components/dashboard/subscription-status";
@@ -129,6 +130,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/dashboard/copy-product",
       icon: (
         <Copy className="text-slate-700 h-5 w-5 flex-shrink-0" />
+      ),
+    },
+    {
+      label: "محصولات دیجی‌کالا",
+      href: "/dashboard/copy-product/digikala/links",
+      icon: (
+        <ShoppingBag className="text-slate-700 h-5 w-5 flex-shrink-0" />
       ),
     },
     {

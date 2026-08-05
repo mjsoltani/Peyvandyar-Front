@@ -962,3 +962,156 @@ export const syncBoothsApi = {
   },
 };
 
+// Digikala import & sync API
+export type DigikalaSyncFields = "price" | "stock" | "all" | Array<"price" | "stock">;
+
+export interface DigikalaIngestBody {
+  url: string;
+  category_id?: number;
+  stock?: number;
+  upload_media?: boolean;
+  include_video?: boolean;
+  variant_id?: string;
+}
+
+export interface DigikalaSellerPreviewBody {
+  url: string;
+  preview_limit?: number;
+  only_marketable?: boolean;
+  limit?: number;
+}
+
+export interface DigikalaSellerImportBody {
+  url: string;
+  limit?: number;
+  skip_existing?: boolean;
+  only_marketable?: boolean;
+  upload_media?: boolean;
+  include_video?: boolean;
+  product_ids?: number[];
+  category_id?: number;
+  stock?: number;
+}
+
+export interface DigikalaLink {
+  id: number;
+  digikala_product_id?: number | string;
+  basalam_product_id?: number | string;
+  digikala_title?: string;
+  external_title?: string;
+  source_url?: string;
+  last_digikala_price?: number | null;
+  last_basalam_price?: number | null;
+  last_digikala_stock?: number | null;
+  last_basalam_stock?: number | null;
+  last_synced_at?: string | null;
+  last_error?: string | null;
+  digikala_seller_code?: string | null;
+  source?: string;
+  destination?: string;
+  [key: string]: unknown;
+}
+
+export const digikalaApi = {
+  /**
+   * پیش‌نمایش تک‌محصول — محصول ساخته نمی‌شود
+   * POST /api/products/ingest/digikala
+   */
+  previewProduct: async (body: DigikalaIngestBody) => {
+    return apiRequest<any>("/products/ingest/digikala", {
+      method: "POST",
+      body: JSON.stringify({
+        upload_media: true,
+        include_video: false,
+        ...body,
+      }),
+    });
+  },
+
+  /**
+   * انتشار تک‌محصول در غرفه باسلام + ذخیره لینک
+   * POST /api/products/ingest/digikala/publish
+   */
+  publishProduct: async (body: DigikalaIngestBody) => {
+    return apiRequest<any>("/products/ingest/digikala/publish", {
+      method: "POST",
+      body: JSON.stringify({
+        upload_media: true,
+        include_video: false,
+        ...body,
+      }),
+    });
+  },
+
+  /**
+   * پیش‌نمایش کاتالوگ seller دیجی‌کالا
+   * POST /api/products/ingest/digikala/seller
+   */
+  previewSeller: async (body: DigikalaSellerPreviewBody) => {
+    return apiRequest<any>("/products/ingest/digikala/seller", {
+      method: "POST",
+      body: JSON.stringify({
+        preview_limit: 20,
+        only_marketable: true,
+        limit: 200,
+        ...body,
+      }),
+    });
+  },
+
+  /**
+   * ایمپورت کاتالوگ seller
+   * POST /api/products/ingest/digikala/seller/import
+   * ≤۵ محصول: sync — >۵: job_id برای poll
+   */
+  importSeller: async (body: DigikalaSellerImportBody) => {
+    return apiRequest<any>("/products/ingest/digikala/seller/import", {
+      method: "POST",
+      body: JSON.stringify({
+        skip_existing: true,
+        only_marketable: true,
+        upload_media: true,
+        include_video: false,
+        ...body,
+      }),
+    });
+  },
+
+  /**
+   * لیست لینک‌های Digikala ↔ Basalam کاربر
+   * GET /api/products/digikala/links
+   */
+  getLinks: async (params?: { limit?: number; offset?: number }) => {
+    const queryParams = new URLSearchParams();
+    queryParams.append("limit", String(params?.limit ?? 100));
+    queryParams.append("offset", String(params?.offset ?? 0));
+    return apiRequest<any>(`/products/digikala/links?${queryParams.toString()}`, {
+      method: "GET",
+    });
+  },
+
+  /**
+   * سینک قیمت/موجودی از دیجی‌کالا روی باسلام
+   * POST /api/products/digikala/sync
+   * با link_id یا basalam_product_id = تک‌آیتم؛ بدون آن‌ها = همه
+   */
+  sync: async (body?: {
+    link_id?: number;
+    basalam_product_id?: number | string;
+    fields?: DigikalaSyncFields;
+  }) => {
+    return apiRequest<any>("/products/digikala/sync", {
+      method: "POST",
+      body: JSON.stringify(body ?? {}),
+    });
+  },
+
+  /**
+   * وضعیت job ایمپورت بزرگ
+   * GET /api/jobs/:jobId/status
+   */
+  getJobStatus: async (jobId: string) => {
+    return syncBoothsApi.getJobStatus(jobId);
+  },
+};
+
