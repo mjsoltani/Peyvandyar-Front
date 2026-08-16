@@ -57,7 +57,7 @@ export default function CopyProductPage() {
     },
     {
       id: "mixi",
-      title: "اضافه کردن فروشگاه از طریق mixin",
+      title: "اضافه کردن از طریق mixin",
       description: "اضافه کردن فروشگاه شما به باسلام، وارد کردن و سینک موجودی",
       icon: Copy,
       isActive: true,
