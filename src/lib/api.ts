@@ -47,7 +47,7 @@ async function apiRequest<T>(
   const token = getAuthToken();
   
   if (!token) {
-    throw new ApiError("Authentication required", 401, true);
+    throw new ApiError("برای ادامه وارد حساب کاربری شوید", 401, true);
   }
 
   // ساخت headers با merge صحیح
@@ -118,8 +118,13 @@ async function apiRequest<T>(
         errorMessage = response.statusText || errorMessage;
       }
 
-      // برای خطاهای احراز هویت، پیغام مناسب‌تر
-      if (isAuthError && !isSubscriptionExpired) {
+      // برای خطاهای احراز هویت پنل، پیغام مناسب‌تر
+      // خطای API Key میکسین را بازنویسی نکن
+      if (
+        isAuthError &&
+        !isSubscriptionExpired &&
+        !/mixin|api.?key|کلید/i.test(errorMessage)
+      ) {
         errorMessage = "دسترسی غیرمجاز - لطفا مجددا وارد شوید";
       }
 
@@ -396,7 +401,7 @@ export const productsApi = {
     const token = getAuthToken();
     
     if (!token) {
-      throw new ApiError("Authentication required", 401, true);
+      throw new ApiError("برای ادامه وارد حساب کاربری شوید", 401, true);
     }
 
     const formData = new FormData();
@@ -1110,6 +1115,173 @@ export const digikalaApi = {
    * وضعیت job ایمپورت بزرگ
    * GET /api/jobs/:jobId/status
    */
+  getJobStatus: async (jobId: string) => {
+    return syncBoothsApi.getJobStatus(jobId);
+  },
+};
+
+// Mixin import & sync API
+export type MixinSyncFields = "price" | "stock" | "all";
+
+export interface MixinConnection {
+  id?: number;
+  user_id?: number;
+  vendor_id?: number;
+  shop_url?: string;
+  shop_name?: string;
+  last_validated_at?: string | null;
+  last_error?: string | null;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
+export interface MixinProduct {
+  id: number;
+  name?: string;
+  price?: number;
+  stock?: number;
+  available?: boolean;
+  has_variants?: boolean;
+  image?: string;
+  images?: unknown;
+  [key: string]: unknown;
+}
+
+export interface MixinLink {
+  id: number;
+  mixin_product_id?: string | number;
+  basalam_product_id?: number;
+  mixin_title?: string;
+  last_mixin_price?: number | null;
+  last_basalam_price?: number | null;
+  last_mixin_stock?: number | null;
+  last_basalam_stock?: number | null;
+  last_synced_at?: string | null;
+  last_error?: string | null;
+  shop_url?: string;
+  source_url?: string;
+  [key: string]: unknown;
+}
+
+export const mixinApi = {
+  /** GET /api/products/mixin/connection */
+  getConnection: async () => {
+    return apiRequest<any>("/products/mixin/connection", { method: "GET" });
+  },
+
+  /** POST /api/products/mixin/connect */
+  connect: async (body: { shop_url: string; api_key: string }) => {
+    return apiRequest<any>("/products/mixin/connect", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  /** DELETE /api/products/mixin/connection */
+  disconnect: async () => {
+    return apiRequest<any>("/products/mixin/connection", { method: "DELETE" });
+  },
+
+  /** GET /api/products/mixin/products */
+  getProducts: async (params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    available?: boolean;
+  }) => {
+    const queryParams = new URLSearchParams();
+    queryParams.append("page", String(params?.page ?? 1));
+    queryParams.append("page_size", String(params?.page_size ?? 25));
+    if (params?.search) queryParams.append("search", params.search);
+    if (params?.available !== undefined) {
+      queryParams.append("available", String(params.available));
+    }
+    return apiRequest<any>(`/products/mixin/products?${queryParams.toString()}`, {
+      method: "GET",
+    });
+  },
+
+  /** POST /api/products/ingest/mixin — preview (محصول ساخته نمی‌شود) */
+  previewProduct: async (body: {
+    product_id: number;
+    category_id?: number;
+    stock?: number;
+    upload_media?: boolean;
+  }) => {
+    return apiRequest<any>("/products/ingest/mixin", {
+      method: "POST",
+      body: JSON.stringify({
+        upload_media: false,
+        ...body,
+      }),
+    });
+  },
+
+  /** POST /api/products/ingest/mixin/publish */
+  publishProduct: async (body: {
+    product_id: number;
+    category_id?: number;
+    stock?: number;
+    upload_media?: boolean;
+  }) => {
+    return apiRequest<any>("/products/ingest/mixin/publish", {
+      method: "POST",
+      body: JSON.stringify({
+        upload_media: true,
+        ...body,
+      }),
+    });
+  },
+
+  /** POST /api/products/ingest/mixin/catalog/import */
+  importCatalog: async (body: {
+    product_ids?: number[];
+    category_id?: number;
+    skip_existing?: boolean;
+    only_available?: boolean;
+    use_mixin_stock?: boolean;
+    upload_media?: boolean;
+    limit?: number;
+    search?: string;
+    stock?: number;
+  }) => {
+    return apiRequest<any>("/products/ingest/mixin/catalog/import", {
+      method: "POST",
+      body: JSON.stringify({
+        skip_existing: true,
+        only_available: true,
+        use_mixin_stock: true,
+        upload_media: true,
+        ...body,
+      }),
+    });
+  },
+
+  /** GET /api/products/mixin/links */
+  getLinks: async (params?: { limit?: number; offset?: number }) => {
+    const queryParams = new URLSearchParams();
+    queryParams.append("limit", String(params?.limit ?? 100));
+    queryParams.append("offset", String(params?.offset ?? 0));
+    return apiRequest<any>(`/products/mixin/links?${queryParams.toString()}`, {
+      method: "GET",
+    });
+  },
+
+  /** POST /api/products/mixin/sync */
+  sync: async (body?: {
+    link_id?: number;
+    basalam_product_id?: number | string;
+    fields?: MixinSyncFields;
+  }) => {
+    return apiRequest<any>("/products/mixin/sync", {
+      method: "POST",
+      body: JSON.stringify(body ?? {}),
+    });
+  },
+
+  /** GET /api/jobs/:jobId/status */
   getJobStatus: async (jobId: string) => {
     return syncBoothsApi.getJobStatus(jobId);
   },
