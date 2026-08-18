@@ -1,0 +1,113 @@
+name: Docker — build & push
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      extra_tag:
+        description: Extra registry tag (leave empty to only push prod / sha)
+        required: false
+        default: ""
+
+concurrency:
+  group: docker-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: registry.hamdocker.ir
+  IMAGE: registry.hamdocker.ir/amintvk/peyvandyar_frontend
+
+jobs:
+  docker:
+    name: Build image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+      tags: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=prod,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+            type=sha,prefix=sha-,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ github.event.inputs.extra_tag }},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.extra_tag != '' }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Check HamDocker secrets
+        if: github.event_name != 'pull_request'
+        env:
+          REGISTRY_USER: ${{ secrets.HAMDOCKER_USERNAME }}
+          REGISTRY_PASS: ${{ secrets.HAMDOCKER_PASSWORD }}
+        run: |
+          if [ -z "$REGISTRY_USER" ] || [ -z "$REGISTRY_PASS" ]; then
+            echo "::error::Set repository secrets HAMDOCKER_USERNAME and HAMDOCKER_PASSWORD."
+            exit 1
+          fi
+
+      - name: Login to HamDocker
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.HAMDOCKER_USERNAME }}
+          password: ${{ secrets.HAMDOCKER_PASSWORD }}
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          provenance: false
+          sbom: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NPM_REGISTRY=https://registry.npmjs.org
+            NODE_OPTIONS=--max-old-space-size=4096
+            NEXT_PUBLIC_API_URL=https://api.peyvand-yar.ir/api
+            NEXT_PUBLIC_APP_URL=https://api.peyvand-yar.ir
+            GIT_SHA=${{ github.sha }}
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## peyvandyar_frontend"
+            echo ""
+            echo "- event: \`${{ github.event_name }}\`"
+            echo "- ref: \`${{ github.ref_name }}\`"
+            echo "- digest: \`${{ steps.push.outputs.digest || 'n/a' }}\`"
+            echo "- pushed: \`${{ github.event_name != 'pull_request' }}\`"
+            echo "- image: \`${{ env.IMAGE }}:prod\`"
+            echo ""
+            echo "### tags"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -3,17 +3,26 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+ARG NPM_REGISTRY=https://mirror-npm.runflare.com
+ARG NODE_OPTIONS="--max-old-space-size=4096"
+ARG NEXT_PUBLIC_API_URL=https://api.peyvand-yar.ir/api
+ARG NEXT_PUBLIC_APP_URL=https://api.peyvand-yar.ir
+ARG GIT_SHA=unknown
+
+ENV NODE_OPTIONS=${NODE_OPTIONS}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+ENV GIT_SHA=${GIT_SHA}
+
 # Copy package files
 COPY package*.json ./
-
-# Install dependencies
-RUN npm ci --legacy-peer-deps
+RUN npm config set registry ${NPM_REGISTRY} \
+ && npm config set strict-ssl false \
+ && npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
 
-# Build the application with increased memory
-ENV NODE_OPTIONS="--max-old-space-size=512"
 RUN npm run build
 
 # Production stage
