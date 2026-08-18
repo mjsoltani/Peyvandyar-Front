@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAuthToken } from "@/lib/auth";
-import { productsApi, userApi } from "@/lib/api";
+import { productsApi, userApi, socialApi, ApiError } from "@/lib/api";
 import { motion } from "framer-motion";
 import { 
   Search,
@@ -21,7 +21,9 @@ import {
   FileText,
   AlertCircle,
   RefreshCw,
-  HelpCircle
+  HelpCircle,
+  Share2,
+  Loader2,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { ApiSectionWrapper } from "@/components/dashboard/api-error-boundary";
@@ -55,8 +57,48 @@ export default function ProductsPage() {
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [totalProducts, setTotalProducts] = useState(0);
   const [showAddProductHelp, setShowAddProductHelp] = useState(false);
+  const [publishingId, setPublishingId] = useState<number | null>(null);
+  const [publishToast, setPublishToast] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   
   const itemsPerPage = 10;
+
+  const showPublishToast = (type: "ok" | "err", text: string) => {
+    setPublishToast({ type, text });
+    setTimeout(() => setPublishToast(null), 4500);
+  };
+
+  const handlePublishSocial = async (product: Product) => {
+    if (!product.photo) {
+      showPublishToast("err", "محصول عکسی برای انتشار ندارد");
+      return;
+    }
+
+    try {
+      setPublishingId(product.id);
+      const response: any = await socialApi.publish({ productId: product.id });
+      const data = response.data ?? response;
+      if (data.success === false) {
+        showPublishToast("err", data.error || data.message || "انتشار ناموفق بود");
+        return;
+      }
+      showPublishToast("ok", data.message || "محصول در شبکه‌های اجتماعی منتشر شد");
+    } catch (err: any) {
+      const notConfigured =
+        err instanceof ApiError &&
+        (err.code === "NOT_CONFIGURED" ||
+          err.statusCode === 400 ||
+          /NOT_CONFIGURED|ابتدا باید اتصال|تنظیم نشده/i.test(err.message || ""));
+
+      if (notConfigured || /NOT_CONFIGURED|ابتدا باید اتصال|تنظیم نشده/i.test(err.message || "")) {
+        showPublishToast("err", "ابتدا اتصال شبکه‌های اجتماعی را تنظیم کنید");
+        setTimeout(() => router.push("/dashboard/social/settings"), 800);
+        return;
+      }
+      showPublishToast("err", err.message || "خطا در انتشار در شبکه‌های اجتماعی");
+    } finally {
+      setPublishingId(null);
+    }
+  };
 
   // Debounce برای جستجو (500ms تاخیر)
   useEffect(() => {
@@ -231,6 +273,19 @@ export default function ProductsPage() {
               مدیریت و ویرایش محصولات فروشگاه باسلام
             </p>
           </div>
+
+          {publishToast && (
+            <div
+              className={cn(
+                "mb-4 p-4 rounded-xl border text-sm",
+                publishToast.type === "ok"
+                  ? "bg-green-50 border-green-200 text-green-800"
+                  : "bg-red-50 border-red-200 text-red-800"
+              )}
+            >
+              {publishToast.text}
+            </div>
+          )}
 
           <ApiSectionWrapper
             error={isError ? new Error(errorMessage) : null}
@@ -467,6 +522,23 @@ export default function ProductsPage() {
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              title={
+                                product.photo
+                                  ? "انتشار در شبکه‌های اجتماعی"
+                                  : "محصول عکسی برای انتشار ندارد"
+                              }
+                              disabled={publishingId != null || !product.photo}
+                              onClick={() => handlePublishSocial(product)}
+                              className="p-2 text-slate-600 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              {publishingId === product.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Share2 className="w-4 h-4" />
+                              )}
+                            </button>
                             <button className="p-2 text-slate-600 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors">
                               <Edit className="w-4 h-4" />
                             </button>

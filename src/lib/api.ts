@@ -1287,3 +1287,103 @@ export const mixinApi = {
   },
 };
 
+// Social publish API (ایتا، بله، …)
+export type SocialPlatform =
+  | "eitaa"
+  | "bale"
+  | "telegram"
+  | "rubika"
+  | "instagram";
+
+export const SOCIAL_PLATFORM_LABELS: Record<SocialPlatform, string> = {
+  eitaa: "ایتا",
+  bale: "بله",
+  telegram: "تلگرام",
+  rubika: "روبیکا",
+  instagram: "اینستاگرام",
+};
+
+export const DEFAULT_SOCIAL_TEMPLATE = `{price} تومان
+
+{title}
+{description}`;
+
+export interface SocialStatus {
+  success?: boolean;
+  platform?: SocialPlatform | string;
+  template?: string;
+  isActive?: boolean;
+  customerId?: number;
+  updatedAt?: string;
+  [key: string]: unknown;
+}
+
+export const socialApi = {
+  /** GET /api/social/status — 404 + NOT_CONFIGURED یعنی هنوز setup نشده */
+  getStatus: async () => {
+    return apiRequest<any>("/social/status", { method: "GET" });
+  },
+
+  /** PUT /api/social/setup */
+  setup: async (body: {
+    platform: SocialPlatform | string;
+    botToken: string;
+    chatId: string;
+    template?: string;
+    extra?: Record<string, unknown>;
+  }) => {
+    return apiRequest<any>("/social/setup", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+
+  /** POST /api/social/publish */
+  publish: async (body: { productId: string | number; template?: string }) => {
+    return apiRequest<any>("/social/publish", {
+      method: "POST",
+      body: JSON.stringify({
+        productId: String(body.productId),
+        ...(body.template ? { template: body.template } : {}),
+      }),
+    });
+  },
+
+  /** GET /api/social/logs */
+  getLogs: async (params?: {
+    platform?: string;
+    status?: "success" | "failed" | string;
+    from?: string;
+    to?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.platform) queryParams.append("platform", params.platform);
+    if (params?.status) queryParams.append("status", params.status);
+    if (params?.from) queryParams.append("from", params.from);
+    if (params?.to) queryParams.append("to", params.to);
+    queryParams.append("page", String(params?.page ?? 1));
+    queryParams.append("limit", String(params?.limit ?? 20));
+    const q = queryParams.toString();
+    return apiRequest<any>(`/social/logs?${q}`, { method: "GET" });
+  },
+
+  /** GET /api/social/reports/summary */
+  getSummary: async (params?: {
+    groupBy?: "platform" | "day" | string;
+    from?: string;
+    to?: string;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.groupBy) queryParams.append("groupBy", params.groupBy);
+    if (params?.from) queryParams.append("from", params.from);
+    if (params?.to) queryParams.append("to", params.to);
+    const q = queryParams.toString();
+    return apiRequest<any>(
+      `/social/reports/summary${q ? `?${q}` : ""}`,
+      { method: "GET" }
+    );
+  },
+};
+

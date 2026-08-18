@@ -14,6 +14,7 @@ import {
   UserCircle,
   RefreshCw,
   ShoppingBag,
+  Share2,
 } from "lucide-react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { SubscriptionStatus } from "@/components/dashboard/subscription-status";
@@ -116,6 +117,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/dashboard/products",
       icon: (
         <Package className="text-slate-700 h-5 w-5 flex-shrink-0" />
+      ),
+    },
+    {
+      label: "شبکه‌های اجتماعی",
+      href: "/dashboard/social",
+      icon: (
+        <Share2 className="text-slate-700 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
