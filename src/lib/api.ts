@@ -1058,7 +1058,7 @@ export const digikalaApi = {
       body: JSON.stringify({
         preview_limit: 20,
         only_marketable: true,
-        limit: 200,
+        limit: 200000,
         ...body,
       }),
     });
@@ -1077,6 +1077,7 @@ export const digikalaApi = {
         only_marketable: true,
         upload_media: true,
         include_video: false,
+        limit: 200000,
         ...body,
       }),
     });
