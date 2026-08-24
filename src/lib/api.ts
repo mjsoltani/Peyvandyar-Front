@@ -1056,9 +1056,9 @@ export const digikalaApi = {
     return apiRequest<any>("/products/ingest/digikala/seller", {
       method: "POST",
       body: JSON.stringify({
-        preview_limit: 20,
+        preview_limit: 15000,
         only_marketable: true,
-        limit: 200000,
+        limit: 15000,
         ...body,
       }),
     });
@@ -1077,7 +1077,7 @@ export const digikalaApi = {
         only_marketable: true,
         upload_media: true,
         include_video: false,
-        limit: 200000,
+        limit: 15000,
         ...body,
       }),
     });

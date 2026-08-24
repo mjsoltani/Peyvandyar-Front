@@ -116,9 +116,9 @@ export default function DigikalaSellerImportPage() {
 
       const response = await digikalaApi.previewSeller({
         url: url.trim(),
-        preview_limit: 40,
+        preview_limit: 15000,
         only_marketable: true,
-        limit: 200000,
+        limit: 15000,
       });
 
       if ((response as any).success === false) {
@@ -163,7 +163,7 @@ export default function DigikalaSellerImportPage() {
         skip_existing: true,
         only_marketable: true,
         upload_media: true,
-        limit: 200000,
+        limit: 15000,
       });
 
       const data: any = response.data ?? response;
