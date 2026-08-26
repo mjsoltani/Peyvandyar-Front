@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { digikalaApi } from "@/lib/api";
@@ -12,92 +12,184 @@ import {
   Loader2,
   CheckCircle,
   Link as LinkIcon,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-function getPreviewItems(data: any): any[] {
-  if (!data) return [];
-  if (Array.isArray(data.preview)) return data.preview;
-  if (Array.isArray(data.products)) return data.products;
-  if (Array.isArray(data.items)) return data.items;
-  if (Array.isArray(data.data?.preview)) return data.data.preview;
-  return [];
+const PREVIEW_POLL_MS = 2500;
+const PREVIEW_TIMEOUT_MS = 3 * 60 * 1000; // ۳ دقیقه
+const IMPORT_POLL_MS = 2000;
+
+function formatToman(value?: number | null) {
+  if (value == null || Number.isNaN(Number(value))) return "—";
+  return Number(value).toLocaleString("fa-IR") + " ت";
 }
 
-function getProductIds(data: any): number[] {
-  const raw =
-    data?.product_ids ||
-    data?.data?.product_ids ||
-    getPreviewItems(data).map((p) => p.id || p.product_id || p.dkp);
-  return (raw || [])
-    .map((id: any) => Number(id))
-    .filter((id: number) => !Number.isNaN(id));
+function unwrapJob(response: any) {
+  return response?.job ?? response?.data?.job ?? response;
+}
+
+function normalizeIds(raw: unknown): number[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((id) => Number(id))
+    .filter((id) => !Number.isNaN(id));
+}
+
+function getItemId(item: any): number | null {
+  const id = Number(
+    item?.digikala_product_id ?? item?.id ?? item?.product_id ?? item?.dkp
+  );
+  return Number.isNaN(id) ? null : id;
 }
 
 export default function DigikalaSellerImportPage() {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const [previewLoadingMessage, setPreviewLoadingMessage] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [sellerData, setSellerData] = useState<any>(null);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [jobProgress, setJobProgress] = useState<number | null>(null);
-  const [jobStatus, setJobStatus] = useState<string | null>(null);
+  const [infoBanner, setInfoBanner] = useState("");
 
-  const previewItems = useMemo(() => getPreviewItems(sellerData), [sellerData]);
-  const allIds = useMemo(() => getProductIds(sellerData), [sellerData]);
+  const [sellerMeta, setSellerMeta] = useState<{
+    seller_code?: string;
+    seller_url?: string;
+    booth_total?: number;
+    effective_limit?: number;
+    requested_limit?: number;
+    preview_request_capped?: boolean;
+  } | null>(null);
+
+  const [previewRows, setPreviewRows] = useState<any[]>([]);
+  const [productIds, setProductIds] = useState<number[]>([]);
+  const [fetchedCount, setFetchedCount] = useState<number | null>(null);
+  const [previewCount, setPreviewCount] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  const [importJobId, setImportJobId] = useState<string | null>(null);
+  const previewPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const importPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previewStartedAt = useRef<number>(0);
+
+  const clearPreviewPoll = () => {
+    if (previewPollRef.current) {
+      clearTimeout(previewPollRef.current);
+      previewPollRef.current = null;
+    }
+  };
+
+  const clearImportPoll = () => {
+    if (importPollRef.current) {
+      clearTimeout(importPollRef.current);
+      importPollRef.current = null;
+    }
+  };
 
   useEffect(() => {
-    if (!jobId) return;
-
-    let cancelled = false;
-    const poll = async () => {
-      try {
-        const status = await digikalaApi.getJobStatus(jobId);
-        if (cancelled) return;
-
-        setJobStatus(String(status.status || ""));
-        if (typeof status.progress === "number") {
-          setJobProgress(status.progress);
-        }
-
-        const normalized = String(status.status || "").toLowerCase();
-        if (normalized === "completed" || normalized === "success") {
-          setSuccess("ایمپورت با موفقیت تمام شد");
-          setIsImporting(false);
-          setJobId(null);
-          return;
-        }
-        if (normalized === "failed" || normalized === "error") {
-          setError(
-            String(status.error || status.message || "ایمپورت ناموفق بود")
-          );
-          setIsImporting(false);
-          setJobId(null);
-          return;
-        }
-
-        setTimeout(poll, 2000);
-      } catch (err: any) {
-        if (!cancelled) {
-          setError(err.message || "خطا در پیگیری وضعیت ایمپورت");
-          setIsImporting(false);
-          setJobId(null);
-        }
-      }
-    };
-
-    poll();
     return () => {
-      cancelled = true;
+      clearPreviewPoll();
+      clearImportPoll();
     };
-  }, [jobId]);
+  }, []);
 
-  const handlePreview = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const applyCompletedPreview = useCallback((results: any, meta?: any) => {
+    const rows = Array.isArray(results?.preview) ? results.preview : [];
+    const ids = normalizeIds(results?.product_ids);
+    const fetched = Number(results?.fetched_count ?? ids.length);
+    const previewCnt = Number(results?.preview_count ?? rows.length);
+    const effective =
+      Number(results?.effective_limit ?? meta?.effective_limit ?? 10000) || 10000;
+
+    setPreviewRows(rows);
+    setProductIds(ids);
+    setSelectedIds(ids);
+    setFetchedCount(fetched);
+    setPreviewCount(previewCnt);
+
+    const nearCap = fetched >= effective * 0.95;
+    const readyMsg = nearCap
+      ? `${effective.toLocaleString("fa-IR")} کالا آماده شد.`
+      : `${fetched.toLocaleString("fa-IR")} کالا آماده شد.`;
+
+    const displayNote =
+      previewCnt < fetched
+        ? ` نمایش ${previewCnt.toLocaleString("fa-IR")} کالا در لیست — برای ایمپورت از همهٔ idهای آماده‌شده استفاده می‌شود.`
+        : "";
+
+    setSuccess(readyMsg + displayNote);
+
+    if (results?.summary || results?.message) {
+      setInfoBanner(String(results.summary || results.message));
+    }
+
+    setSellerMeta((prev) => ({
+      ...prev,
+      seller_code: results?.seller_code || prev?.seller_code || meta?.seller_code,
+      seller_url: results?.seller_url || prev?.seller_url || meta?.seller_url,
+      booth_total: results?.booth_total ?? prev?.booth_total ?? meta?.booth_total,
+      effective_limit: effective,
+      requested_limit: results?.requested_limit ?? prev?.requested_limit ?? meta?.requested_limit,
+      preview_request_capped:
+        results?.preview_request_capped ??
+        prev?.preview_request_capped ??
+        meta?.preview_request_capped,
+    }));
+  }, []);
+
+  const pollPreviewJob = useCallback(
+    async (jobId: string, meta: any) => {
+      clearPreviewPoll();
+
+      const tick = async () => {
+        if (Date.now() - previewStartedAt.current > PREVIEW_TIMEOUT_MS) {
+          setIsPreviewing(false);
+          setPreviewLoadingMessage("");
+          setError("آماده‌سازی لیست طولانی شد. دوباره تلاش کنید.");
+          return;
+        }
+
+        try {
+          const response: any = await digikalaApi.getJobStatus(jobId);
+          const job = unwrapJob(response);
+          const status = String(job?.status || "").toLowerCase();
+
+          if (status === "pending") {
+            setPreviewLoadingMessage("در صف آماده‌سازی لیست غرفه…");
+          } else if (status === "processing") {
+            setPreviewLoadingMessage("در حال دریافت محصولات از دیجی‌کالا…");
+          }
+
+          if (status === "completed" || status === "success") {
+            setIsPreviewing(false);
+            setPreviewLoadingMessage("");
+            applyCompletedPreview(job?.results || {}, meta);
+            return;
+          }
+
+          if (status === "failed" || status === "error") {
+            setIsPreviewing(false);
+            setPreviewLoadingMessage("");
+            setError(String(job?.error || job?.message || "آماده‌سازی لیست ناموفق بود"));
+            return;
+          }
+
+          previewPollRef.current = setTimeout(tick, PREVIEW_POLL_MS);
+        } catch (err: any) {
+          setIsPreviewing(false);
+          setPreviewLoadingMessage("");
+          setError(err.message || "خطا در پیگیری وضعیت آماده‌سازی");
+        }
+      };
+
+      await tick();
+    },
+    [applyCompletedPreview]
+  );
+
+  const startPreview = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!url.trim()) {
       setError("لطفا لینک غرفه دیجی‌کالا را وارد کنید");
       return;
@@ -107,33 +199,78 @@ export default function DigikalaSellerImportPage() {
       return;
     }
 
-    try {
-      setIsPreviewing(true);
-      setError("");
-      setSuccess("");
-      setSellerData(null);
-      setSelectedIds([]);
+    clearPreviewPoll();
+    setIsPreviewing(true);
+    setPreviewLoadingMessage("در حال آماده‌سازی لیست غرفه…");
+    setError("");
+    setSuccess("");
+    setInfoBanner("");
+    setPreviewRows([]);
+    setProductIds([]);
+    setSelectedIds([]);
+    setFetchedCount(null);
+    setPreviewCount(null);
+    setSellerMeta(null);
+    previewStartedAt.current = Date.now();
 
-      const response = await digikalaApi.previewSeller({
+    try {
+      const response: any = await digikalaApi.previewSeller({
         url: url.trim(),
         preview_limit: 15000,
         only_marketable: true,
-        limit: 15000,
       });
 
-      if ((response as any).success === false) {
-        setError((response as any).message || (response as any).error || "خطا در پیش‌نمایش غرفه");
+      const data = response.data ?? response;
+      if (data.success === false) {
+        setIsPreviewing(false);
+        setPreviewLoadingMessage("");
+        setError(data.message || data.error || "خطا در پیش‌نمایش غرفه");
         return;
       }
 
-      const data = response.data ?? response;
-      setSellerData(data);
-      const ids = getProductIds(data);
-      setSelectedIds(ids);
-    } catch (err: any) {
-      setError(err.message || "خطا در پیش‌نمایش غرفه");
-    } finally {
+      const meta = {
+        seller_code: data.seller_code,
+        seller_url: data.seller_url,
+        booth_total: data.booth_total,
+        effective_limit: data.effective_limit,
+        requested_limit: data.requested_limit,
+        preview_request_capped: data.preview_request_capped,
+      };
+      setSellerMeta(meta);
+
+      if (data.preview_request_capped && data.effective_limit) {
+        setInfoBanner(
+          `درخواست شما به سقف ${Number(data.effective_limit).toLocaleString("fa-IR")} کالا محدود شد.`
+        );
+      }
+
+      const mode = String(data.mode || "").toLowerCase();
+      const jobId = data.job_id || data.jobId;
+
+      // مسیر async استاندارد
+      if (mode === "async" || jobId) {
+        if (!jobId) {
+          setIsPreviewing(false);
+          setPreviewLoadingMessage("");
+          setError("پاسخ سرور ناقص است؛ دوباره تلاش کنید.");
+          return;
+        }
+        await pollPreviewJob(String(jobId), meta);
+        return;
+      }
+
+      // سازگاری با پاسخ sync قدیمی (اگر هنوز برگردد)
       setIsPreviewing(false);
+      setPreviewLoadingMessage("");
+      if (Array.isArray(data.preview) || Array.isArray(data.product_ids)) {
+        applyCompletedPreview(data, meta);
+      } else {
+        setError("فرمت پاسخ پیش‌نمایش پشتیبانی نمی‌شود");
+      }
+    } catch (err: any) {
+      setIsPreviewing(false);
+      setPreviewLoadingMessage("");
+      setError(err.message || "خطا در پیش‌نمایش غرفه");
     }
   };
 
@@ -142,6 +279,47 @@ export default function DigikalaSellerImportPage() {
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
+
+  const pollImportJob = useCallback(async (jobId: string) => {
+    clearImportPoll();
+
+    const tick = async () => {
+      try {
+        const response: any = await digikalaApi.getJobStatus(jobId);
+        const job = unwrapJob(response);
+        const status = String(job?.status || "").toLowerCase();
+
+        if (status === "completed" || status === "success") {
+          setIsImporting(false);
+          setImportJobId(null);
+          const results = job?.results || {};
+          setSuccess(
+            `ایمپورت با موفقیت تمام شد${
+              results.products_imported != null || results.imported != null
+                ? `: ${(results.products_imported ?? results.imported).toLocaleString("fa-IR")} محصول`
+                : ""
+            }`
+          );
+          return;
+        }
+
+        if (status === "failed" || status === "error") {
+          setIsImporting(false);
+          setImportJobId(null);
+          setError(String(job?.error || job?.message || "ایمپورت ناموفق بود"));
+          return;
+        }
+
+        importPollRef.current = setTimeout(tick, IMPORT_POLL_MS);
+      } catch (err: any) {
+        setIsImporting(false);
+        setImportJobId(null);
+        setError(err.message || "خطا در پیگیری وضعیت ایمپورت");
+      }
+    };
+
+    await tick();
+  }, []);
 
   const handleImport = async () => {
     if (selectedIds.length === 0) {
@@ -153,20 +331,19 @@ export default function DigikalaSellerImportPage() {
       setIsImporting(true);
       setError("");
       setSuccess("");
-      setJobId(null);
-      setJobProgress(null);
-      setJobStatus(null);
+      setImportJobId(null);
+      clearImportPoll();
 
-      const response = await digikalaApi.importSeller({
+      const response: any = await digikalaApi.importSeller({
         url: url.trim(),
         product_ids: selectedIds,
         skip_existing: true,
         only_marketable: true,
         upload_media: true,
-        limit: 15000,
+        limit: 10000,
       });
 
-      const data: any = response.data ?? response;
+      const data = response.data ?? response;
 
       if (data.success === false) {
         setError(data.message || data.error || "خطا در ایمپورت");
@@ -175,14 +352,24 @@ export default function DigikalaSellerImportPage() {
       }
 
       const returnedJobId = data.job_id || data.jobId;
-      if (returnedJobId) {
-        setJobId(String(returnedJobId));
-        setSuccess("ایمپورت شروع شد؛ در حال پیگیری وضعیت...");
+      if (data.mode === "async" || returnedJobId) {
+        if (!returnedJobId) {
+          setError("پاسخ ایمپورت ناقص است");
+          setIsImporting(false);
+          return;
+        }
+        setImportJobId(String(returnedJobId));
+        setSuccess("ایمپورت شروع شد؛ لطفاً صبر کنید…");
+        await pollImportJob(String(returnedJobId));
         return;
       }
 
       setSuccess(
-        `ایمپورت انجام شد${data.imported != null ? `: ${data.imported} محصول` : ""}`
+        `ایمپورت انجام شد${
+          data.imported != null || data.products_imported != null
+            ? `: ${(data.imported ?? data.products_imported).toLocaleString("fa-IR")} محصول`
+            : ""
+        }`
       );
       setIsImporting(false);
     } catch (err: any) {
@@ -196,13 +383,15 @@ export default function DigikalaSellerImportPage() {
     }
   };
 
+  const hasCatalog = previewRows.length > 0 || productIds.length > 0;
+
   return (
     <DashboardLayout>
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-4xl mx-auto"
+          className="max-w-5xl mx-auto"
         >
           <button
             onClick={() => router.push("/dashboard/copy-product/digikala")}
@@ -219,15 +408,32 @@ export default function DigikalaSellerImportPage() {
             <div>
               <h1 className="text-2xl font-bold text-slate-800">ایمپورت از غرفه seller</h1>
               <p className="text-sm text-slate-500">
-                پیش‌نمایش کاتالوگ، انتخاب محصولات و ایمپورت به باسلام
+                آماده‌سازی لیست غرفه، انتخاب محصولات و ایمپورت به باسلام
               </p>
             </div>
           </div>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-red-800 text-sm">{error}</p>
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <p className="text-red-800 text-sm">{error}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => startPreview()}
+                disabled={isPreviewing}
+                className="px-3 py-1.5 text-sm rounded-lg border border-red-200 text-red-700 hover:bg-red-100 inline-flex items-center gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                تلاش مجدد
+              </button>
+            </div>
+          )}
+
+          {infoBanner && !error && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+              {infoBanner}
             </div>
           )}
 
@@ -236,13 +442,7 @@ export default function DigikalaSellerImportPage() {
               <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-green-800 space-y-1">
                 <p>{success}</p>
-                {jobStatus && (
-                  <p>
-                    وضعیت: {jobStatus}
-                    {jobProgress != null ? ` — ${jobProgress}%` : ""}
-                  </p>
-                )}
-                {!jobId && (
+                {!isImporting && !importJobId && hasCatalog && (
                   <button
                     onClick={() => router.push("/dashboard/copy-product/digikala/links")}
                     className="underline font-medium"
@@ -255,7 +455,7 @@ export default function DigikalaSellerImportPage() {
           )}
 
           <form
-            onSubmit={handlePreview}
+            onSubmit={startPreview}
             className="bg-white rounded-xl border border-slate-200 p-6 space-y-4"
           >
             <div>
@@ -269,7 +469,8 @@ export default function DigikalaSellerImportPage() {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://www.digikala.com/seller/DCVJG/"
-                  className="w-full pr-10 pl-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400"
+                  disabled={isPreviewing || isImporting}
+                  className="w-full pr-10 pl-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-400 disabled:bg-slate-50"
                   dir="ltr"
                 />
               </div>
@@ -277,13 +478,13 @@ export default function DigikalaSellerImportPage() {
 
             <button
               type="submit"
-              disabled={isPreviewing}
+              disabled={isPreviewing || isImporting}
               className="w-full py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
             >
               {isPreviewing ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  در حال دریافت کاتالوگ...
+                  {previewLoadingMessage || "در حال آماده‌سازی…"}
                 </>
               ) : (
                 "پیش‌نمایش کاتالوگ"
@@ -291,25 +492,49 @@ export default function DigikalaSellerImportPage() {
             </button>
           </form>
 
-          {sellerData && (
+          {isPreviewing && (
+            <div className="mt-6 bg-white rounded-xl border border-slate-200 p-8 text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-orange-500 mx-auto mb-3" />
+              <p className="font-medium text-slate-800">
+                {previewLoadingMessage || "در حال آماده‌سازی لیست غرفه…"}
+              </p>
+              <p className="text-sm text-slate-500 mt-2">
+                این کار ممکن است کمی طول بکشد؛ لطفاً صفحه را نبندید.
+              </p>
+              {sellerMeta?.booth_total != null && (
+                <p className="text-xs text-slate-400 mt-3">
+                  کل غرفه روی دیجی‌کالا:{" "}
+                  {Number(sellerMeta.booth_total).toLocaleString("fa-IR")} کالا
+                  {sellerMeta.effective_limit != null &&
+                    ` — سقف آماده‌سازی: ${Number(sellerMeta.effective_limit).toLocaleString("fa-IR")}`}
+                </p>
+              )}
+            </div>
+          )}
+
+          {!isPreviewing && hasCatalog && (
             <div className="mt-6 bg-white rounded-xl border border-slate-200 p-6">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div>
                   <h2 className="font-bold text-slate-800">
-                    {sellerData.seller_code || sellerData.seller_url || "کاتالوگ فروشنده"}
+                    {sellerMeta?.seller_code || sellerMeta?.seller_url || "کاتالوگ فروشنده"}
                   </h2>
-                  <p className="text-sm text-slate-500">
-                    تعداد پیدا‌شده: {sellerData.product_count ?? allIds.length} — انتخاب‌شده:{" "}
-                    {selectedIds.length}
+                  <p className="text-sm text-slate-500 mt-1">
+                    آماده‌شده: {(fetchedCount ?? productIds.length).toLocaleString("fa-IR")}
+                    {previewCount != null &&
+                      ` — نمایش: ${previewCount.toLocaleString("fa-IR")}`}
+                    {sellerMeta?.booth_total != null &&
+                      ` — کل غرفه: ${Number(sellerMeta.booth_total).toLocaleString("fa-IR")}`}
+                    {" — "}انتخاب‌شده: {selectedIds.length.toLocaleString("fa-IR")}
                   </p>
                 </div>
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setSelectedIds(allIds)}
+                    onClick={() => setSelectedIds(productIds)}
                     className="px-3 py-2 text-sm rounded-lg border border-slate-200 hover:border-orange-300"
                   >
-                    انتخاب همه
+                    انتخاب همه آماده‌شده‌ها
                   </button>
                   <button
                     type="button"
@@ -321,12 +546,18 @@ export default function DigikalaSellerImportPage() {
                 </div>
               </div>
 
-              <div className="space-y-2 max-h-[420px] overflow-y-auto mb-4">
-                {(previewItems.length > 0 ? previewItems : allIds.map((id) => ({ id }))).map(
-                  (item: any, idx: number) => {
-                    const id = Number(item.id || item.product_id || item.dkp || allIds[idx]);
-                    if (Number.isNaN(id)) return null;
+              <div className="space-y-2 max-h-[480px] overflow-y-auto mb-4">
+                {previewRows.length === 0 ? (
+                  <p className="text-sm text-slate-500 p-4 text-center">
+                    ردیف نمایشی موجود نیست، اما{" "}
+                    {productIds.length.toLocaleString("fa-IR")} شناسه برای ایمپورت آماده است.
+                  </p>
+                ) : (
+                  previewRows.map((item, idx) => {
+                    const id = getItemId(item);
+                    if (id == null) return null;
                     const title = item.title || item.name || `محصول ${id}`;
+                    const image = item.image_url || item.image;
                     const checked = selectedIds.includes(id);
                     return (
                       <label
@@ -344,29 +575,52 @@ export default function DigikalaSellerImportPage() {
                           onChange={() => toggleId(id)}
                           className="w-4 h-4 accent-orange-500"
                         />
+                        {image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={image}
+                            alt=""
+                            className="w-12 h-12 rounded-lg object-cover border border-slate-100"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-slate-100" />
+                        )}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-800 truncate">{title}</p>
-                          <p className="text-xs text-slate-500" dir="ltr">
-                            dkp-{id}
+                          <p className="text-sm font-medium text-slate-800 truncate">
+                            {title}
                           </p>
+                          <div className="flex flex-wrap gap-2 mt-1 text-xs text-slate-500">
+                            <span dir="ltr">dkp-{id}</span>
+                            {item.price_toman != null && (
+                              <span>{formatToman(item.price_toman)}</span>
+                            )}
+                            {item.stock != null && (
+                              <span>موجودی: {Number(item.stock).toLocaleString("fa-IR")}</span>
+                            )}
+                            {item.status && <span>{item.status}</span>}
+                          </div>
                         </div>
+                        {item.url && (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(ev) => ev.stopPropagation()}
+                            className="text-xs text-orange-600 hover:underline"
+                          >
+                            دیجی‌کالا
+                          </a>
+                        )}
                       </label>
                     );
-                  }
+                  })
                 )}
               </div>
 
-              {jobId && (
-                <div className="mb-4 p-3 bg-slate-50 rounded-xl text-sm text-slate-600">
-                  در حال ایمپورت async...
-                  {jobProgress != null && (
-                    <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-orange-500 transition-all"
-                        style={{ width: `${Math.min(100, Math.max(0, jobProgress))}%` }}
-                      />
-                    </div>
-                  )}
+              {isImporting && (
+                <div className="mb-4 p-3 bg-slate-50 rounded-xl text-sm text-slate-600 flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+                  در حال ایمپورت… لطفاً صبر کنید.
                 </div>
               )}
 
@@ -381,7 +635,7 @@ export default function DigikalaSellerImportPage() {
                     در حال ایمپورت...
                   </>
                 ) : (
-                  `ایمپورت ${selectedIds.length} محصول`
+                  `ایمپورت ${selectedIds.length.toLocaleString("fa-IR")} محصول`
                 )}
               </button>
             </div>

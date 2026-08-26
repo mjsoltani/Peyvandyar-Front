@@ -1056,9 +1056,9 @@ export const digikalaApi = {
     return apiRequest<any>("/products/ingest/digikala/seller", {
       method: "POST",
       body: JSON.stringify({
+        // بک‌اند soft-cap ۱۰هزار اعمال می‌کند؛ درخواست بالاتر ارور نمی‌دهد
         preview_limit: 15000,
         only_marketable: true,
-        limit: 15000,
         ...body,
       }),
     });
@@ -1077,7 +1077,7 @@ export const digikalaApi = {
         only_marketable: true,
         upload_media: true,
         include_video: false,
-        limit: 15000,
+        limit: 10000,
         ...body,
       }),
     });
