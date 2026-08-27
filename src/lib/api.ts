@@ -230,7 +230,7 @@ export const productsApi = {
   }) => {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append("page", params.page.toString());
-    // استفاده از per_page به جای limit (طبق API-ENDPOINTS.json)
+    // استفاده از per_page به جای limit (طبق docs/api/API-ENDPOINTS.json)
     const perPage = params?.per_page || params?.limit;
     if (perPage) queryParams.append("per_page", perPage.toString());
     if (params?.search) queryParams.append("search", params.search);
@@ -281,7 +281,7 @@ export const productsApi = {
     // تبدیل قیمت از تومان به ریال قبل از ارسال
     const convertedData = convertPriceToRial(data);
     return apiRequest<any>(`/products/${id}`, {
-      method: "PATCH", // طبق API-ENDPOINTS.json باید PATCH باشد
+      method: "PATCH", // طبق docs/api/API-ENDPOINTS.json باید PATCH باشد
       body: JSON.stringify(convertedData),
     });
   },
@@ -292,9 +292,9 @@ export const productsApi = {
   bulkUpdateProducts: async (products: Array<{ id: number; [key: string]: any }>) => {
     // تبدیل قیمت از تومان به ریال قبل از ارسال
     const convertedProducts = convertPriceToRial({ products });
-    // طبق API-ENDPOINTS.json باید آرایه products ارسال شود
+    // طبق docs/api/API-ENDPOINTS.json باید آرایه products ارسال شود
     return apiRequest<any>("/products/batch-update", {
-      method: "PATCH", // طبق API-ENDPOINTS.json باید PATCH باشد
+      method: "PATCH", // طبق docs/api/API-ENDPOINTS.json باید PATCH باشد
       body: JSON.stringify(convertedProducts),
     });
   },
