@@ -996,6 +996,39 @@ export interface DigikalaSellerImportBody {
   product_ids?: number[];
   category_id?: number;
   stock?: number;
+  /** درصد افزایش قیمت نسبت به دیجی‌کالا؛ در صورت ارسال روی غرفه persist می‌شود */
+  price_markup_percent?: number;
+}
+
+export interface DigikalaSyncRule {
+  id?: number;
+  user_id?: number;
+  vendor_id?: number;
+  source?: string;
+  destination?: string;
+  price_markup_percent?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DigikalaSyncRuleResponse {
+  success?: boolean;
+  vendor_id?: number;
+  source?: string;
+  destination?: string;
+  price_markup_percent?: number;
+  rule?: DigikalaSyncRule | null;
+  message?: string;
+  error?: string;
+}
+
+/** محدوده مجاز بک‌اند برای مارک‌آپ قیمت */
+export const DIGIKALA_MARKUP_MIN = -99;
+export const DIGIKALA_MARKUP_MAX = 1000;
+
+export function clampDigikalaMarkup(value: number): number {
+  if (Number.isNaN(value)) return 0;
+  return Math.max(DIGIKALA_MARKUP_MIN, Math.min(DIGIKALA_MARKUP_MAX, value));
 }
 
 export interface DigikalaLink {
@@ -1100,6 +1133,7 @@ export const digikalaApi = {
    * سینک قیمت/موجودی از دیجی‌کالا روی باسلام
    * POST /api/products/digikala/sync
    * با link_id یا basalam_product_id = تک‌آیتم؛ بدون آن‌ها = همه
+   * مارک‌آپ از sync-rule غرفه خوانده می‌شود؛ نیازی به فرستادن درصد نیست.
    */
   sync: async (body?: {
     link_id?: number;
@@ -1110,6 +1144,32 @@ export const digikalaApi = {
       method: "POST",
       body: JSON.stringify(body ?? {}),
     });
+  },
+
+  /**
+   * خواندن قانون مارک‌آپ قیمت غرفه باسلام
+   * GET /api/products/digikala/sync-rule
+   */
+  getSyncRule: async () => {
+    return apiRequest<DigikalaSyncRuleResponse>(
+      "/products/digikala/sync-rule",
+      { method: "GET" }
+    );
+  },
+
+  /**
+   * ذخیره قانون مارک‌آپ قیمت غرفه باسلام
+   * PUT /api/products/digikala/sync-rule
+   */
+  updateSyncRule: async (price_markup_percent: number) => {
+    const percent = clampDigikalaMarkup(Number(price_markup_percent));
+    return apiRequest<DigikalaSyncRuleResponse>(
+      "/products/digikala/sync-rule",
+      {
+        method: "PUT",
+        body: JSON.stringify({ price_markup_percent: percent }),
+      }
+    );
   },
 
   /**

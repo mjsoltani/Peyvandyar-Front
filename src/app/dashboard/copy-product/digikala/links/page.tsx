@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { DigikalaPriceMarkupSettings } from "@/components/dashboard/digikala-price-markup-settings";
 import { digikalaApi, DigikalaLink, DigikalaSyncFields } from "@/lib/api";
 import { motion } from "framer-motion";
 import {
@@ -22,6 +23,11 @@ function formatPrice(value?: number | null) {
   // قیمت API معمولاً ریال است → نمایش تومان
   const toman = Math.round(Number(value) / 10);
   return toman.toLocaleString("fa-IR") + " ت";
+}
+
+function formatTomanDirect(value?: number | null) {
+  if (value == null || Number.isNaN(Number(value))) return null;
+  return Number(value).toLocaleString("fa-IR") + " ت";
 }
 
 function formatRelative(dateStr?: string | null) {
@@ -47,23 +53,57 @@ function extractLinks(response: any): DigikalaLink[] {
   return [];
 }
 
+function formatPricingLine(result: any): string | null {
+  const pricing = result?.pricing;
+  const markup =
+    pricing?.price_markup_percent ?? result?.price_markup_percent ?? null;
+
+  if (
+    pricing?.digikala_selling_toman != null &&
+    pricing?.new_basalam_price != null
+  ) {
+    const digi = formatTomanDirect(pricing.digikala_selling_toman);
+    const basalam = formatTomanDirect(pricing.new_basalam_price);
+    const pct =
+      markup != null && Number(markup) !== 0
+        ? ` (+${Number(markup).toLocaleString("fa-IR")}٪)`
+        : "";
+    return `دیجی ${digi} → باسلام ${basalam}${pct}`;
+  }
+
+  if (markup != null && Number(markup) !== 0) {
+    return `مارک‌آپ اعمال‌شده: ${Number(markup).toLocaleString("fa-IR")}٪`;
+  }
+
+  return null;
+}
+
 function syncToastMessage(result: any, mode: "one" | "all") {
   if (mode === "all" || result?.mode === "batch") {
     const updated = result?.updated ?? 0;
     const unchanged = result?.unchanged ?? 0;
     const failed = result?.failed ?? 0;
-    return `سینک تمام شد: ${updated} به‌روز شد، ${unchanged} بدون تغییر، ${failed} ناموفق`;
+    const markup = result?.price_markup_percent;
+    const markupPart =
+      markup != null && Number(markup) !== 0
+        ? ` — مارک‌آپ ${Number(markup).toLocaleString("fa-IR")}٪`
+        : "";
+    return `سینک تمام شد: ${updated} به‌روز شد، ${unchanged} بدون تغییر، ${failed} ناموفق${markupPart}`;
   }
+
+  const pricingLine = formatPricingLine(result);
 
   if (result?.basalam_updated) {
     const parts: string[] = [];
     if (result.price_changed) parts.push("قیمت");
     if (result.stock_changed) parts.push("موجودی");
-    return parts.length
+    const base = parts.length
       ? `به‌روزرسانی شد (${parts.join(" و ")})`
       : "به‌روزرسانی شد";
+    return pricingLine ? `${base} — ${pricingLine}` : base;
   }
 
+  if (pricingLine) return `قبلاً به‌روز بود — ${pricingLine}`;
   return "قبلاً به‌روز بود؛ تغییری لازم نبود";
 }
 
@@ -72,14 +112,17 @@ export default function DigikalaLinksPage() {
   const [links, setLinks] = useState<DigikalaLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [toast, setToast] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [toast, setToast] = useState<{ type: "ok" | "err"; text: string } | null>(
+    null
+  );
   const [fields, setFields] = useState<SyncFieldsUi>("all");
   const [syncingAll, setSyncingAll] = useState(false);
   const [syncingOne, setSyncingOne] = useState<number | null>(null);
+  const [boothMarkup, setBoothMarkup] = useState(0);
 
   const showToast = (type: "ok" | "err", text: string) => {
     setToast({ type, text });
-    setTimeout(() => setToast(null), 5000);
+    setTimeout(() => setToast(null), 6000);
   };
 
   const loadLinks = useCallback(async () => {
@@ -114,6 +157,7 @@ export default function DigikalaLinksPage() {
 
     try {
       setSyncingOne(link.id);
+      // درصد را نفرست — بک‌اند از sync-rule غرفه می‌خواند
       const response = await digikalaApi.sync({
         link_id: link.id,
         fields: fields as DigikalaSyncFields,
@@ -123,6 +167,11 @@ export default function DigikalaLinksPage() {
         showToast("err", data.error || data.message || "خطا در سینک");
       } else {
         showToast("ok", syncToastMessage(data, "one"));
+        const applied =
+          data?.pricing?.price_markup_percent ?? data?.price_markup_percent;
+        if (applied != null && !Number.isNaN(Number(applied))) {
+          setBoothMarkup(Number(applied));
+        }
       }
       await loadLinks();
     } catch (err: any) {
@@ -147,6 +196,9 @@ export default function DigikalaLinksPage() {
         showToast("err", data.error || data.message || "خطا در سینک همه");
       } else {
         showToast("ok", syncToastMessage(data, "all"));
+        if (data?.price_markup_percent != null) {
+          setBoothMarkup(Number(data.price_markup_percent));
+        }
       }
       await loadLinks();
     } catch (err: any) {
@@ -179,9 +231,17 @@ export default function DigikalaLinksPage() {
                 <Link2 className="w-6 h-6 text-orange-500" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-800">محصولات دیجی‌کالا</h1>
+                <h1 className="text-2xl font-bold text-slate-800">
+                  محصولات دیجی‌کالا
+                </h1>
                 <p className="text-sm text-slate-500">
                   لینک‌های ایمپورت‌شده و سینک قیمت / موجودی
+                  {boothMarkup !== 0 && (
+                    <span className="text-orange-600">
+                      {" "}
+                      — مارک‌آپ غرفه: {boothMarkup.toLocaleString("fa-IR")}٪
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -207,7 +267,14 @@ export default function DigikalaLinksPage() {
             </div>
           )}
 
-          {/* Toolbar */}
+          <div className="mb-4">
+            <DigikalaPriceMarkupSettings
+              value={boothMarkup}
+              onChange={setBoothMarkup}
+              disabled={syncingAll || syncingOne != null}
+            />
+          </div>
+
           <div className="bg-white rounded-xl border border-slate-200 p-4 mb-4 flex flex-wrap items-center gap-3 justify-between">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-slate-600">نوع سینک:</span>
@@ -319,7 +386,10 @@ export default function DigikalaLinksPage() {
                                 </a>
                               )}
                               {link.basalam_product_id != null && (
-                                <span className="text-xs text-slate-400" dir="ltr">
+                                <span
+                                  className="text-xs text-slate-400"
+                                  dir="ltr"
+                                >
                                   BS:{String(link.basalam_product_id)}
                                 </span>
                               )}
@@ -329,7 +399,14 @@ export default function DigikalaLinksPage() {
                             {formatPrice(link.last_digikala_price)}
                           </td>
                           <td className="p-3 whitespace-nowrap">
-                            {formatPrice(link.last_basalam_price)}
+                            <div>{formatPrice(link.last_basalam_price)}</div>
+                            {boothMarkup !== 0 &&
+                              link.last_digikala_price != null && (
+                                <div className="text-[11px] text-slate-400 mt-0.5">
+                                  قاعده غرفه: +
+                                  {boothMarkup.toLocaleString("fa-IR")}٪
+                                </div>
+                              )}
                           </td>
                           <td className="p-3 whitespace-nowrap">
                             {link.last_digikala_stock ?? "—"}

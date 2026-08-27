@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { digikalaApi } from "@/lib/api";
+import {
+  DIGIKALA_IMPORT_JOB_STORAGE_KEY,
+  ImportJobStatusBar,
+  type ImportJobSummary,
+} from "@/components/dashboard/import-job-status-bar";
+import { DigikalaPriceMarkupSettings } from "@/components/dashboard/digikala-price-markup-settings";
+import { digikalaApi, clampDigikalaMarkup } from "@/lib/api";
 import { motion } from "framer-motion";
 import {
   Store,
@@ -18,7 +24,6 @@ import { cn } from "@/lib/utils";
 
 const PREVIEW_POLL_MS = 2500;
 const PREVIEW_TIMEOUT_MS = 3 * 60 * 1000; // ۳ دقیقه
-const IMPORT_POLL_MS = 2000;
 
 function formatToman(value?: number | null) {
   if (value == null || Number.isNaN(Number(value))) return "—";
@@ -69,8 +74,12 @@ export default function DigikalaSellerImportPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const [importJobId, setImportJobId] = useState<string | null>(null);
+  const [showImportBar, setShowImportBar] = useState(false);
+  const [importTerminal, setImportTerminal] = useState(false);
+  const [markupPercent, setMarkupPercent] = useState(0);
+  const [appliedMarkup, setAppliedMarkup] = useState<number | null>(null);
+  const appliedMarkupRef = useRef<number | null>(null);
   const previewPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const importPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewStartedAt = useRef<number>(0);
 
   const clearPreviewPoll = () => {
@@ -80,17 +89,44 @@ export default function DigikalaSellerImportPage() {
     }
   };
 
-  const clearImportPoll = () => {
-    if (importPollRef.current) {
-      clearTimeout(importPollRef.current);
-      importPollRef.current = null;
+  const persistImportJob = (jobId: string) => {
+    try {
+      localStorage.setItem(DIGIKALA_IMPORT_JOB_STORAGE_KEY, jobId);
+    } catch {
+      /* ignore */
     }
   };
+
+  const clearPersistedImportJob = () => {
+    try {
+      localStorage.removeItem(DIGIKALA_IMPORT_JOB_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const openImportJobBar = (jobId: string) => {
+    setImportJobId(jobId);
+    setImportTerminal(false);
+    setShowImportBar(true);
+    persistImportJob(jobId);
+  };
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DIGIKALA_IMPORT_JOB_STORAGE_KEY);
+      if (saved) {
+        setImportJobId(saved);
+        setShowImportBar(true);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
       clearPreviewPoll();
-      clearImportPoll();
     };
   }, []);
 
@@ -280,59 +316,73 @@ export default function DigikalaSellerImportPage() {
     );
   };
 
-  const pollImportJob = useCallback(async (jobId: string) => {
-    clearImportPoll();
-
-    const tick = async () => {
-      try {
-        const response: any = await digikalaApi.getJobStatus(jobId);
-        const job = unwrapJob(response);
-        const status = String(job?.status || "").toLowerCase();
-
-        if (status === "completed" || status === "success") {
-          setIsImporting(false);
-          setImportJobId(null);
-          const results = job?.results || {};
-          setSuccess(
-            `ایمپورت با موفقیت تمام شد${
-              results.products_imported != null || results.imported != null
-                ? `: ${(results.products_imported ?? results.imported).toLocaleString("fa-IR")} محصول`
-                : ""
-            }`
-          );
-          return;
-        }
-
-        if (status === "failed" || status === "error") {
-          setIsImporting(false);
-          setImportJobId(null);
-          setError(String(job?.error || job?.message || "ایمپورت ناموفق بود"));
-          return;
-        }
-
-        importPollRef.current = setTimeout(tick, IMPORT_POLL_MS);
-      } catch (err: any) {
-        setIsImporting(false);
-        setImportJobId(null);
-        setError(err.message || "خطا در پیگیری وضعیت ایمپورت");
-      }
-    };
-
-    await tick();
+  const handleImportJobDone = useCallback((summary?: ImportJobSummary) => {
+    clearPersistedImportJob();
+    setImportTerminal(true);
+    if (summary?.message && summary.successful_imports == null && summary.products_imported == null) {
+      setError(summary.message);
+      setSuccess("");
+      setShowImportBar(true);
+      return;
+    }
+    const ok = summary?.successful_imports ?? summary?.products_imported;
+    const fail = summary?.failed_imports ?? summary?.products_failed;
+    if (ok != null || fail != null) {
+      const markup = appliedMarkupRef.current;
+      setSuccess(
+        `ایمپورت تمام شد${
+          ok != null ? ` — ${Number(ok).toLocaleString("fa-IR")} موفق` : ""
+        }${
+          fail != null && Number(fail) > 0
+            ? `، ${Number(fail).toLocaleString("fa-IR")} ناموفق`
+            : ""
+        }${
+          markup != null
+            ? markup === 0
+              ? " — بدون مارک‌آپ قیمت"
+              : ` — مارک‌آپ ${markup.toLocaleString("fa-IR")}٪`
+            : ""
+        }`
+      );
+      setError("");
+      setShowImportBar(true);
+    }
   }, []);
+
+  const dismissImportBar = useCallback(() => {
+    setShowImportBar(false);
+    if (importTerminal) {
+      setImportJobId(null);
+      setImportTerminal(false);
+    }
+  }, [importTerminal]);
+
+  const markupSuffix = (percent?: number | null) => {
+    if (percent == null || Number.isNaN(Number(percent))) return "";
+    const n = Number(percent);
+    if (n === 0) return " — بدون مارک‌آپ قیمت";
+    return ` — مارک‌آپ ${n.toLocaleString("fa-IR")}٪`;
+  };
 
   const handleImport = async () => {
     if (selectedIds.length === 0) {
       setError("حداقل یک محصول را انتخاب کنید");
       return;
     }
+    if (importJobId && !importTerminal) {
+      setError("یک ایمپورت در حال اجراست؛ نتیجه را از نوار پایین ببینید.");
+      setShowImportBar(true);
+      return;
+    }
+
+    const percent = clampDigikalaMarkup(Number(markupPercent));
 
     try {
       setIsImporting(true);
       setError("");
       setSuccess("");
-      setImportJobId(null);
-      clearImportPoll();
+      setAppliedMarkup(null);
+      appliedMarkupRef.current = null;
 
       const response: any = await digikalaApi.importSeller({
         url: url.trim(),
@@ -341,6 +391,7 @@ export default function DigikalaSellerImportPage() {
         only_marketable: true,
         upload_media: true,
         limit: 10000,
+        price_markup_percent: percent,
       });
 
       const data = response.data ?? response;
@@ -351,16 +402,31 @@ export default function DigikalaSellerImportPage() {
         return;
       }
 
+      const responseMarkup = clampDigikalaMarkup(
+        Number(
+          data.price_markup_percent ??
+            data.results?.price_markup_percent ??
+            percent
+        )
+      );
+      setAppliedMarkup(responseMarkup);
+      appliedMarkupRef.current = responseMarkup;
+      setMarkupPercent(responseMarkup);
+
       const returnedJobId = data.job_id || data.jobId;
-      if (data.mode === "async" || returnedJobId) {
+      const mode = String(data.mode || "").toLowerCase();
+
+      if (mode === "async" || returnedJobId) {
         if (!returnedJobId) {
           setError("پاسخ ایمپورت ناقص است");
           setIsImporting(false);
           return;
         }
-        setImportJobId(String(returnedJobId));
-        setSuccess("ایمپورت شروع شد؛ لطفاً صبر کنید…");
-        await pollImportJob(String(returnedJobId));
+        setIsImporting(false);
+        setSuccess(
+          `ایمپورت در پس‌زمینه شروع شد${markupSuffix(responseMarkup)}`
+        );
+        openImportJobBar(String(returnedJobId));
         return;
       }
 
@@ -369,7 +435,7 @@ export default function DigikalaSellerImportPage() {
           data.imported != null || data.products_imported != null
             ? `: ${(data.imported ?? data.products_imported).toLocaleString("fa-IR")} محصول`
             : ""
-        }`
+        }${markupSuffix(responseMarkup)}`
       );
       setIsImporting(false);
     } catch (err: any) {
@@ -442,7 +508,12 @@ export default function DigikalaSellerImportPage() {
               <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-green-800 space-y-1">
                 <p>{success}</p>
-                {!isImporting && !importJobId && hasCatalog && (
+                {appliedMarkup != null && appliedMarkup !== 0 && (
+                  <p className="text-xs text-green-700">
+                    قیمت باسلام = قیمت دیجی × (۱ + {appliedMarkup.toLocaleString("fa-IR")}٪)
+                  </p>
+                )}
+                {!isImporting && !(importJobId && !importTerminal) && hasCatalog && (
                   <button
                     onClick={() => router.push("/dashboard/copy-product/digikala/links")}
                     className="underline font-medium"
@@ -453,6 +524,14 @@ export default function DigikalaSellerImportPage() {
               </div>
             </div>
           )}
+
+          <div className="mb-4">
+            <DigikalaPriceMarkupSettings
+              value={markupPercent}
+              onChange={setMarkupPercent}
+              disabled={isPreviewing || isImporting}
+            />
+          </div>
 
           <form
             onSubmit={startPreview}
@@ -617,23 +696,39 @@ export default function DigikalaSellerImportPage() {
                 )}
               </div>
 
-              {isImporting && (
-                <div className="mb-4 p-3 bg-slate-50 rounded-xl text-sm text-slate-600 flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
-                  در حال ایمپورت… لطفاً صبر کنید.
-                </div>
+              {importJobId && !importTerminal && (
+                <p className="mb-4 text-sm text-slate-500 flex flex-wrap items-center gap-2">
+                  <span>
+                    ایمپورت در پس‌زمینه در حال اجراست — می‌توانید صفحه را ترک کنید.
+                  </span>
+                  {!showImportBar && (
+                    <button
+                      type="button"
+                      onClick={() => setShowImportBar(true)}
+                      className="text-orange-600 underline font-medium"
+                    >
+                      نمایش پیشرفت
+                    </button>
+                  )}
+                </p>
               )}
 
               <button
                 onClick={handleImport}
-                disabled={isImporting || selectedIds.length === 0}
+                disabled={
+                  isImporting ||
+                  selectedIds.length === 0 ||
+                  Boolean(importJobId && !importTerminal)
+                }
                 className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
               >
                 {isImporting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    در حال ایمپورت...
+                    در حال ارسال درخواست…
                   </>
+                ) : importJobId && !importTerminal ? (
+                  "ایمپورت در حال اجرا…"
                 ) : (
                   `ایمپورت ${selectedIds.length.toLocaleString("fa-IR")} محصول`
                 )}
@@ -641,6 +736,15 @@ export default function DigikalaSellerImportPage() {
             </div>
           )}
         </motion.div>
+
+        {importJobId && (
+          <ImportJobStatusBar
+            jobId={importJobId}
+            onDone={handleImportJobDone}
+            onDismiss={dismissImportBar}
+            className={showImportBar ? undefined : "hidden"}
+          />
+        )}
       </main>
     </DashboardLayout>
   );
