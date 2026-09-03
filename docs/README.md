@@ -17,6 +17,7 @@
 |-----|--------|
 | [guides/digikala/digikala-frontend-guide.md](./guides/digikala/digikala-frontend-guide.md) | API و فلوهای ایمپورت/سینک |
 | [guides/digikala/digikala-seller-preview-frontend.md](./guides/digikala/digikala-seller-preview-frontend.md) | پیش‌نمایش فروشنده (جاب async) |
+| [guides/digikala/digikala-seller-import-frontend.md](./guides/digikala/digikala-seller-import-frontend.md) | ایمپورت غرفه: skip / duplicate / replace |
 | [guides/digikala/frontend-digikala-import-job-ux.md](./guides/digikala/frontend-digikala-import-job-ux.md) | UX ایمپورت سنگین بدون اسپینر ابدی |
 | [guides/digikala/frontend-digikala-price-markup.md](./guides/digikala/frontend-digikala-price-markup.md) | مارک‌آپ قیمت per غرفه باسلام |
 
