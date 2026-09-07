@@ -9,7 +9,16 @@ import {
   type ImportJobSummary,
 } from "@/components/dashboard/import-job-status-bar";
 import { DigikalaPriceMarkupSettings } from "@/components/dashboard/digikala-price-markup-settings";
-import { digikalaApi, clampDigikalaMarkup } from "@/lib/api";
+import {
+  DigikalaImportModeSettings,
+  resolveReplaceFields,
+  type DigikalaImportModeSettingsValue,
+} from "@/components/dashboard/digikala-import-mode-settings";
+import {
+  digikalaApi,
+  clampDigikalaMarkup,
+  type DigikalaSellerImportBody,
+} from "@/lib/api";
 import { motion } from "framer-motion";
 import {
   Store,
@@ -48,6 +57,54 @@ function getItemId(item: any): number | null {
   return Number.isNaN(id) ? null : id;
 }
 
+const DEFAULT_IMPORT_MODE: DigikalaImportModeSettingsValue = {
+  importMode: "skip",
+  nameSuffix: "",
+  skuSuffix: "",
+  replacePreset: "all",
+  customReplaceFields: ["price", "media"],
+};
+
+function faCount(n: number) {
+  return n.toLocaleString("fa-IR");
+}
+
+function formatImportCounts(data: any): string {
+  const results = data?.results ?? data;
+  const nested = data?.summary ?? results?.summary ?? {};
+  const imported = Number(
+    results?.products_imported ??
+      results?.successful_imports ??
+      nested?.successful_imports
+  );
+  const created = Number(results?.products_created);
+  const replaced = Number(results?.products_replaced);
+  const duplicated = Number(results?.products_duplicated);
+  const skipped = Number(results?.skipped_existing_count);
+  const failed = Number(
+    results?.products_failed ?? results?.failed_imports ?? nested?.failed_imports
+  );
+
+  const parts: string[] = [];
+  if (!Number.isNaN(imported)) parts.push(`${faCount(imported)} موفق`);
+  if (!Number.isNaN(created) && created > 0) {
+    parts.push(`${faCount(created)} جدید`);
+  }
+  if (!Number.isNaN(replaced) && replaced > 0) {
+    parts.push(`${faCount(replaced)} جایگزین`);
+  }
+  if (!Number.isNaN(duplicated) && duplicated > 0) {
+    parts.push(`${faCount(duplicated)} کپی`);
+  }
+  if (!Number.isNaN(skipped) && skipped > 0) {
+    parts.push(`${faCount(skipped)} ردشده`);
+  }
+  if (!Number.isNaN(failed) && failed > 0) {
+    parts.push(`${faCount(failed)} ناموفق`);
+  }
+  return parts.length ? ` — ${parts.join("، ")}` : "";
+}
+
 export default function DigikalaSellerImportPage() {
   const router = useRouter();
   const [url, setUrl] = useState("");
@@ -78,6 +135,8 @@ export default function DigikalaSellerImportPage() {
   const [importTerminal, setImportTerminal] = useState(false);
   const [markupPercent, setMarkupPercent] = useState(0);
   const [appliedMarkup, setAppliedMarkup] = useState<number | null>(null);
+  const [importModeSettings, setImportModeSettings] =
+    useState<DigikalaImportModeSettingsValue>(DEFAULT_IMPORT_MODE);
   const appliedMarkupRef = useRef<number | null>(null);
   const previewPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewStartedAt = useRef<number>(0);
@@ -330,13 +389,7 @@ export default function DigikalaSellerImportPage() {
     if (ok != null || fail != null) {
       const markup = appliedMarkupRef.current;
       setSuccess(
-        `ایمپورت تمام شد${
-          ok != null ? ` — ${Number(ok).toLocaleString("fa-IR")} موفق` : ""
-        }${
-          fail != null && Number(fail) > 0
-            ? `، ${Number(fail).toLocaleString("fa-IR")} ناموفق`
-            : ""
-        }${
+        `ایمپورت تمام شد${formatImportCounts(summary)}${
           markup != null
             ? markup === 0
               ? " — بدون مارک‌آپ قیمت"
@@ -376,6 +429,16 @@ export default function DigikalaSellerImportPage() {
     }
 
     const percent = clampDigikalaMarkup(Number(markupPercent));
+    const { importMode, nameSuffix, skuSuffix } = importModeSettings;
+
+    if (
+      importMode === "replace" &&
+      importModeSettings.replacePreset === "custom" &&
+      importModeSettings.customReplaceFields.length === 0
+    ) {
+      setError("حداقل یک فیلد برای جایگزینی انتخاب کنید");
+      return;
+    }
 
     try {
       setIsImporting(true);
@@ -384,15 +447,28 @@ export default function DigikalaSellerImportPage() {
       setAppliedMarkup(null);
       appliedMarkupRef.current = null;
 
-      const response: any = await digikalaApi.importSeller({
+      const body: DigikalaSellerImportBody = {
         url: url.trim(),
         product_ids: selectedIds,
-        skip_existing: true,
+        import_mode: importMode,
         only_marketable: true,
         upload_media: true,
         limit: 10000,
         price_markup_percent: percent,
-      });
+      };
+
+      if (importMode === "duplicate") {
+        const name = nameSuffix.trim();
+        const sku = skuSuffix.trim();
+        if (name) body.name_suffix = name;
+        if (sku) body.sku_suffix = sku;
+      }
+
+      if (importMode === "replace") {
+        body.replace_fields = resolveReplaceFields(importModeSettings);
+      }
+
+      const response: any = await digikalaApi.importSeller(body);
 
       const data = response.data ?? response;
 
@@ -431,17 +507,19 @@ export default function DigikalaSellerImportPage() {
       }
 
       setSuccess(
-        `ایمپورت انجام شد${
-          data.imported != null || data.products_imported != null
-            ? `: ${(data.imported ?? data.products_imported).toLocaleString("fa-IR")} محصول`
-            : ""
-        }${markupSuffix(responseMarkup)}`
+        `ایمپورت انجام شد${formatImportCounts(data)}${markupSuffix(responseMarkup)}`
       );
       setIsImporting(false);
     } catch (err: any) {
       const msg = err.message || "خطا در ایمپورت";
       if (err.statusCode === 404 || /No Digikala products left/i.test(msg)) {
-        setError("چیزی برای ایمپورت نمانده؛ احتمالاً همه قبلاً لینک شده‌اند");
+        setError(
+          importModeSettings.importMode === "skip"
+            ? "در حالت رد کردن، همه کالاهای انتخاب‌شده قبلاً لینک شده‌اند"
+            : "چیزی برای ایمپورت نمانده؛ احتمالاً همه قبلاً لینک شده‌اند"
+        );
+      } else if (err.statusCode === 400) {
+        setError(msg || "پارامتر ایمپورت نامعتبر است");
       } else {
         setError(msg);
       }
@@ -529,6 +607,14 @@ export default function DigikalaSellerImportPage() {
             <DigikalaPriceMarkupSettings
               value={markupPercent}
               onChange={setMarkupPercent}
+              disabled={isPreviewing || isImporting}
+            />
+          </div>
+
+          <div className="mb-4">
+            <DigikalaImportModeSettings
+              value={importModeSettings}
+              onChange={setImportModeSettings}
               disabled={isPreviewing || isImporting}
             />
           </div>
@@ -718,7 +804,10 @@ export default function DigikalaSellerImportPage() {
                 disabled={
                   isImporting ||
                   selectedIds.length === 0 ||
-                  Boolean(importJobId && !importTerminal)
+                  Boolean(importJobId && !importTerminal) ||
+                  (importModeSettings.importMode === "replace" &&
+                    importModeSettings.replacePreset === "custom" &&
+                    importModeSettings.customReplaceFields.length === 0)
                 }
                 className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
               >
@@ -729,6 +818,10 @@ export default function DigikalaSellerImportPage() {
                   </>
                 ) : importJobId && !importTerminal ? (
                   "ایمپورت در حال اجرا…"
+                ) : importModeSettings.importMode === "replace" ? (
+                  `به‌روزرسانی ${selectedIds.length.toLocaleString("fa-IR")} محصول`
+                ) : importModeSettings.importMode === "duplicate" ? (
+                  `افزودن مجدد ${selectedIds.length.toLocaleString("fa-IR")} محصول`
                 ) : (
                   `ایمپورت ${selectedIds.length.toLocaleString("fa-IR")} محصول`
                 )}

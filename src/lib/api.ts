@@ -986,9 +986,28 @@ export interface DigikalaSellerPreviewBody {
   limit?: number;
 }
 
+export type DigikalaImportMode = "skip" | "duplicate" | "replace";
+
+export type DigikalaReplaceField =
+  | "all"
+  | "price"
+  | "stock"
+  | "price_stock"
+  | "content"
+  | "media";
+
 export interface DigikalaSellerImportBody {
   url: string;
   limit?: number;
+  /** رفتار با کالاهای لینک‌شده؛ اولویت بالاتر از skip_existing */
+  import_mode?: DigikalaImportMode;
+  /** فقط duplicate — به انتهای عنوان اضافه می‌شود */
+  name_suffix?: string;
+  /** فقط duplicate — اگر نباشد بک‌اند پسوند timestamp می‌گذارد */
+  sku_suffix?: string;
+  /** فقط replace — یک مقدار یا ترکیب چند فیلد */
+  replace_fields?: DigikalaReplaceField | DigikalaReplaceField[];
+  /** معادل قدیمی skip/duplicate؛ اگر import_mode هم باشد نادیده گرفته می‌شود */
   skip_existing?: boolean;
   only_marketable?: boolean;
   upload_media?: boolean;
@@ -1106,7 +1125,7 @@ export const digikalaApi = {
     return apiRequest<any>("/products/ingest/digikala/seller/import", {
       method: "POST",
       body: JSON.stringify({
-        skip_existing: true,
+        import_mode: "skip",
         only_marketable: true,
         upload_media: true,
         include_video: false,

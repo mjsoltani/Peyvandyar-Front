@@ -17,6 +17,11 @@ export type ImportJobSummary = {
   success_rate?: string;
   products_imported?: number;
   products_failed?: number;
+  products_created?: number;
+  products_replaced?: number;
+  products_duplicated?: number;
+  skipped_existing_count?: number;
+  import_mode?: string;
   message?: string;
 };
 
@@ -97,6 +102,28 @@ function phaseLabel(
   return "ایمپورت متوقف شد";
 }
 
+function extraCountSuffix(summary?: ImportJobSummary) {
+  if (!summary) return "";
+  const bits: string[] = [];
+  if (summary.products_created)
+    bits.push(
+      `${Number(summary.products_created).toLocaleString("fa-IR")} جدید`
+    );
+  if (summary.products_replaced)
+    bits.push(
+      `${Number(summary.products_replaced).toLocaleString("fa-IR")} جایگزین`
+    );
+  if (summary.products_duplicated)
+    bits.push(
+      `${Number(summary.products_duplicated).toLocaleString("fa-IR")} کپی`
+    );
+  if (summary.skipped_existing_count)
+    bits.push(
+      `${Number(summary.skipped_existing_count).toLocaleString("fa-IR")} ردشده`
+    );
+  return bits.length ? ` — ${bits.join("، ")}` : "";
+}
+
 export function ImportJobStatusBar({
   jobId,
   onDone,
@@ -173,6 +200,11 @@ export function ImportJobStatusBar({
           failed_imports:
             response?.summary?.failed_imports ?? results.products_failed,
           success_rate: response?.summary?.success_rate,
+          products_created: results.products_created,
+          products_replaced: results.products_replaced,
+          products_duplicated: results.products_duplicated,
+          skipped_existing_count: results.skipped_existing_count,
+          import_mode: results.import_mode,
         };
         setSummary(sum);
         setPhase("done");
@@ -315,6 +347,7 @@ export function ImportJobStatusBar({
           {failCount != null && Number(failCount) > 0
             ? `، ${Number(failCount).toLocaleString("fa-IR")} ناموفق`
             : ""}
+          {extraCountSuffix(summary)}
           {summary?.success_rate ? ` (${summary.success_rate})` : ""}
         </p>
       )}
