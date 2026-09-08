@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { removeAuthToken } from "@/lib/auth";
+import { userApi } from "@/lib/api";
+import { unwrapUserStatus } from "@/lib/admin";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -15,6 +17,7 @@ import {
   RefreshCw,
   ShoppingBag,
   Share2,
+  Shield,
 } from "lucide-react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { SubscriptionStatus } from "@/components/dashboard/subscription-status";
@@ -98,6 +101,24 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    userApi
+      .getStatus()
+      .then((response) => {
+        if (cancelled) return;
+        const user = unwrapUserStatus(response);
+        setIsSuperAdmin(user?.role === "superadmin" && user?.is_active !== false);
+      })
+      .catch(() => {
+        if (!cancelled) setIsSuperAdmin(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleLogout = () => {
     removeAuthToken();
@@ -169,6 +190,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       ),
     },
   ];
+
+  if (isSuperAdmin) {
+    links.splice(links.length - 1, 0, {
+      label: "پنل ادمین",
+      href: "/admin",
+      icon: <Shield className="text-slate-700 h-5 w-5 flex-shrink-0" />,
+    });
+  }
 
   return (
     <div dir="rtl" className="min-h-screen bg-slate-50 flex flex-col md:flex-row">

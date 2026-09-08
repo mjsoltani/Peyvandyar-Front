@@ -125,7 +125,13 @@ async function apiRequest<T>(
         !isSubscriptionExpired &&
         !/mixin|api.?key|کلید/i.test(errorMessage)
       ) {
-        errorMessage = "دسترسی غیرمجاز - لطفا مجددا وارد شوید";
+        if (response.status === 403) {
+          if (!errorMessage || errorMessage.startsWith("HTTP error")) {
+            errorMessage = "دسترسی ندارید";
+          }
+        } else {
+          errorMessage = "دسترسی غیرمجاز - لطفا مجددا وارد شوید";
+        }
       }
 
       throw new ApiError(errorMessage, response.status, isAuthError, isSubscriptionExpired, errorCode, retryAfter);
@@ -465,6 +471,14 @@ export const productsApi = {
 // User/Profile API
 export const userApi = {
   /**
+   * نقش و وضعیت کاربر فعلی — برای گیت ادمین از این استفاده شود (نه /me)
+   * GET /api/user/status
+   */
+  getStatus: async () => {
+    return apiRequest<any>("/user/status", { method: "GET" });
+  },
+
+  /**
    * دریافت اطلاعات کاربر فعلی
    */
   getProfile: async () => {
@@ -514,195 +528,159 @@ export const currencyApi = {
   },
 };
 
-// Admin API (نیاز به admin authentication)
+export type UserRole = "vendor" | "superadmin";
+export type SubscriptionType =
+  | "trial"
+  | "free"
+  | "monthly"
+  | "biweekly"
+  | "premium";
+
+export interface AdminUser {
+  id: number;
+  phone_number: string;
+  username: string | null;
+  basalam_user_id: number | null;
+  basalam_vendor_id: number | null;
+  vendor_title: string | null;
+  role: UserRole;
+  is_active: boolean;
+  subscription_type: SubscriptionType | string;
+  expires_at: string | null;
+  utm_data: string | null;
+  last_activity_at: string | null;
+  created_at: string;
+  updated_at: string;
+  token_count: number;
+  last_token_used: string | null;
+  [key: string]: unknown;
+}
+
+export interface SubscriptionStatus {
+  status: string;
+  subscription_type: SubscriptionType | string;
+  access_level: "full" | "limited" | "none" | string;
+  can_use_api: boolean;
+  is_active: boolean;
+  expires_at: string | null;
+  is_expired: boolean;
+  remaining?: { days: number; hours: number; milliseconds: number };
+  display?: { status_text: string; remaining_text: string };
+}
+
+export interface AdminPagination {
+  page: number;
+  per_page: number;
+  total: number;
+  total_pages: number;
+}
+
+function appendQuery(
+  params: Record<string, string | number | boolean | undefined>
+) {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== "") q.set(key, String(value));
+  });
+  const s = q.toString();
+  return s ? `?${s}` : "";
+}
+
+// Admin API — فقط superadmin با همان X-Encrypted-Token
 export const adminApi = {
-  /**
-   * دریافت لیست تمام کاربران
-   * GET /api/admin/users
-   */
-  getUsers: async (params?: { page?: number; per_page?: number; search?: string }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append("page", params.page.toString());
-    if (params?.per_page) queryParams.append("per_page", params.per_page.toString());
-    if (params?.search) queryParams.append("search", params.search);
-
-    const query = queryParams.toString();
-    const response = await apiRequest<any>(
-      `/admin/users${query ? `?${query}` : ""}`,
-      { method: "GET" }
-    );
-    
-    // تبدیل response format برای سازگاری
-    const responseData = response as any;
-    if (response.success && responseData.users) {
-      return {
-        success: true,
-        data: {
-          data: responseData.users
-        },
-        pagination: {
-          current_page: params?.page || 1,
-          per_page: params?.per_page || 50,
-          total: responseData.count || 0,
-          last_page: Math.ceil((responseData.count || 0) / (params?.per_page || 50))
-        }
-      };
-    }
-    return response;
-  },
-
-  /**
-   * دریافت اطلاعات کاربر خاص
-   * GET /api/admin/users/{phone_number}
-   */
-  getUserByPhone: async (phoneNumber: string) => {
+  listUsers: async (params?: {
+    page?: number;
+    per_page?: number;
+    q?: string;
+    is_active?: boolean;
+    subscription_type?: string;
+  }) => {
     return apiRequest<any>(
-      `/admin/users/${encodeURIComponent(phoneNumber)}`,
+      `/admin/users${appendQuery({
+        page: params?.page,
+        per_page: params?.per_page,
+        q: params?.q,
+        is_active: params?.is_active,
+        subscription_type: params?.subscription_type,
+      })}`,
       { method: "GET" }
     );
   },
 
-  /**
-   * تغییر وضعیت کاربر
-   * PATCH /api/admin/users/update-status
-   */
-  updateUserStatus: async (phoneNumber: string, status: string) => {
+  getUser: async (phone: string) => {
+    return apiRequest<any>(`/admin/users/${encodeURIComponent(phone)}`, {
+      method: "GET",
+    });
+  },
+
+  setActive: async (phone_number: string, is_active: boolean) => {
+    return apiRequest<any>("/admin/users/update-status", {
+      method: "PATCH",
+      body: JSON.stringify({ phone_number, is_active }),
+    });
+  },
+
+  updateSubscription: async (
+    phone: string,
+    body: { subscription_type?: SubscriptionType | string; expires_at?: string | null }
+  ) => {
     return apiRequest<any>(
-      `/admin/users/update-status`,
+      `/admin/users/${encodeURIComponent(phone)}/subscription`,
       {
         method: "PATCH",
-        body: JSON.stringify({ phone_number: phoneNumber, status }),
+        body: JSON.stringify(body),
       }
     );
   },
 
-  /**
-   * فعال کردن کاربر
-   * POST /api/admin/users/activate
-   */
-  activateUser: async (phoneNumber: string) => {
+  extendSubscription: async (body: {
+    phoneNumber: string;
+    subscriptionType?: SubscriptionType | string;
+    days?: number;
+  }) => {
+    return apiRequest<any>("/trial/extend", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  digikalaSync: async (
+    body: { user_id?: number; fields?: string | string[] } = {}
+  ) => {
+    return apiRequest<any>("/admin/digikala/sync", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  archiveVendor: async (body: {
+    vendor_id: string;
+    vendor_token?: string;
+    only_published?: boolean;
+  }) => {
+    return apiRequest<any>("/admin/products/archive-vendor", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  archiveJobs: async (vendorId: string, page = 1, per_page = 30) => {
     return apiRequest<any>(
-      `/admin/users/activate`,
-      {
-        method: "POST",
-        body: JSON.stringify({ phone_number: phoneNumber }),
-      }
+      `/admin/products/archive-vendor/${encodeURIComponent(vendorId)}/jobs${appendQuery(
+        { page, per_page }
+      )}`,
+      { method: "GET" }
     );
   },
 
-  /**
-   * غیرفعال کردن کاربر
-   * POST /api/admin/users/deactivate
-   */
-  deactivateUser: async (phoneNumber: string) => {
-    return apiRequest<any>(
-      `/admin/users/deactivate`,
-      {
-        method: "POST",
-        body: JSON.stringify({ phone_number: phoneNumber }),
-      }
-    );
-  },
-
-  /**
-   * دریافت توکن‌های در انتظار تایید
-   */
-  getPendingTokens: async () => {
-    const response = await fetch(`${API_BASE_URL}/tokens/pending`);
-    if (!response.ok) {
-      throw new Error("Failed to fetch pending tokens");
-    }
-    return response.json();
-  },
-
-  /**
-   * تایید توکن
-   */
-  approveToken: async (tokenId: number, approvedBy: string) => {
-    const response = await fetch(`${API_BASE_URL}/tokens/${tokenId}/approve`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ approved_by: approvedBy }),
+  jobStatus: async (jobId: string) => {
+    return apiRequest<any>(`/jobs/${encodeURIComponent(jobId)}/status`, {
+      method: "GET",
     });
-    if (!response.ok) {
-      throw new Error("Failed to approve token");
-    }
-    return response.json();
   },
 
-  /**
-   * رد کردن توکن
-   */
-  rejectToken: async (tokenId: number) => {
-    const response = await fetch(`${API_BASE_URL}/tokens/${tokenId}/reject`, {
-      method: "POST",
-    });
-    if (!response.ok) {
-      throw new Error("Failed to reject token");
-    }
-    return response.json();
-  },
-
-  /**
-   * ذخیره توکن به صورت دستی
-   */
-  setToken: async (token: string, username: string) => {
-    const response = await fetch(`${API_BASE_URL}/token/set`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ token, username }),
-    });
-    if (!response.ok) {
-      throw new Error("Failed to set token");
-    }
-    return response.json();
-  },
-
-  /**
-   * دریافت اطلاعات توکن
-   */
-  getTokenInfo: async (username: string) => {
-    const response = await fetch(
-      `${API_BASE_URL}/token/info?username=${encodeURIComponent(username)}`
-    );
-    if (!response.ok) {
-      throw new Error("Failed to fetch token info");
-    }
-    return response.json();
-  },
-
-  /**
-   * حذف توکن کاربر
-   */
-  deleteToken: async (username: string) => {
-    const response = await fetch(`${API_BASE_URL}/token/delete`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ username }),
-    });
-    if (!response.ok) {
-      throw new Error("Failed to delete token");
-    }
-    return response.json();
-  },
-
-  /**
-   * دریافت توکن decrypt شده کاربر
-   */
-  getAuthToken: async (username: string) => {
-    const response = await fetch(
-      `${API_BASE_URL}/auth/token?username=${encodeURIComponent(username)}`
-    );
-    if (!response.ok) {
-      throw new Error("Failed to fetch auth token");
-    }
-    return response.json();
+  trialCleanup: async () => {
+    return apiRequest<any>("/trial/cleanup", { method: "POST" });
   },
 };
 

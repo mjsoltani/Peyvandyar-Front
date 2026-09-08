@@ -37,6 +37,11 @@
 | [guides/payment/PAYMENT_FRONTEND_GUIDE.md](./guides/payment/PAYMENT_FRONTEND_GUIDE.md) | فلو و API درگاه باسلام |
 | [guides/payment/PAYMENT_IMPLEMENTATION.md](./guides/payment/PAYMENT_IMPLEMENTATION.md) | پیاده‌سازی در فرانت |
 
+### ادمین پنل
+| سند | توضیح |
+|-----|--------|
+| [guides/admin/admin-panel-frontend-spec.md](./guides/admin/admin-panel-frontend-spec.md) | پنل superadmin: کاربران، اشتراک، ابزارها |
+
 ### کپی محصول / چندفروشگاهی
 | سند | توضیح |
 |-----|--------|

@@ -11,6 +11,26 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react", "@tabler/icons-react"],
   },
+  async redirects() {
+    return [
+      { source: "/dashboard/admin", destination: "/admin", permanent: false },
+      {
+        source: "/dashboard/admin/login",
+        destination: "/admin",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/admin/users",
+        destination: "/admin/users",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/admin/pending",
+        destination: "/admin",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

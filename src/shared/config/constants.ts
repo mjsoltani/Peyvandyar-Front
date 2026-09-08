@@ -20,9 +20,8 @@ export const ROUTES = {
   COPY_PRODUCT: '/dashboard/copy-product',
   SUBSCRIPTION: '/subscription',
   PAYMENT_CALLBACK: '/payment/callback',
-  ADMIN: '/dashboard/admin',
-  ADMIN_USERS: '/dashboard/admin/users',
-  ADMIN_PENDING: '/dashboard/admin/pending',
+  ADMIN: '/admin',
+  ADMIN_USERS: '/admin/users',
 } as const;
 
 export const BASALAM_SSO_URL = 
