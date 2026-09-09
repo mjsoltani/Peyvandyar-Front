@@ -25,10 +25,11 @@
 .DS_Store
 *.pem
 
-# markdown: ignore root scratch notes; keep project README + docs/
+# markdown: ignore root scratch notes; keep project README + docs + agent skills
 *.md
 !README.md
 !docs/**/*.md
+!.cursor/skills/**/*.md
 
 # local tooling (preview server config)
 /.claude
