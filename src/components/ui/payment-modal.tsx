@@ -11,7 +11,7 @@ interface PaymentModalProps {
   onClose: () => void;
   planName: string;
   price: string;
-  planId: "monthly" | "biweekly"; // اضافه شدن plan_id
+  planId: string;
 }
 
 export function PaymentModal({
@@ -35,33 +35,32 @@ export function PaymentModal({
         setError("لطفا ابتدا وارد حساب کاربری خود شوید");
         return;
       }
+      if (!planId) {
+        setError("پلن نامعتبر است");
+        return;
+      }
 
-      console.log("Payment request:", {
-        plan_id: planId,
-        planName,
-        price,
-      });
-
-      // ایجاد پیش‌تراکنش با plan_id
       const response = await paymentApi.createPayment({
         plan_id: planId,
       });
 
-      console.log("Payment response:", response);
-
       if (response.success && response.pay_url) {
-        // redirect به درگاه پرداخت
-        console.log("Redirecting to:", response.pay_url);
         window.location.href = response.pay_url;
       } else {
-        console.error("Payment failed:", response);
         setError(response.message || response.error || "خطا در ایجاد تراکنش. لطفا دوباره تلاش کنید.");
       }
     } catch (err: any) {
-      console.error("Payment error:", err);
-      setError(
-        err.message || "خطا در برقراری ارتباط با درگاه پرداخت. لطفا دوباره تلاش کنید."
-      );
+      if (err?.code === "INVALID_PLAN" || err?.statusCode === 400) {
+        setError(
+          err.code === "INVALID_PLAN"
+            ? "این پلن فعال نیست. صفحه را تازه کنید و دوباره انتخاب کنید."
+            : err.message || "پلن نامعتبر است"
+        );
+      } else {
+        setError(
+          err.message || "خطا در برقراری ارتباط با درگاه پرداخت. لطفا دوباره تلاش کنید."
+        );
+      }
     } finally {
       setIsLoading(false);
     }

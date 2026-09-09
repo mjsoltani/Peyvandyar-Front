@@ -36,6 +36,7 @@
 |-----|--------|
 | [guides/payment/PAYMENT_FRONTEND_GUIDE.md](./guides/payment/PAYMENT_FRONTEND_GUIDE.md) | فلو و API درگاه باسلام |
 | [guides/payment/PAYMENT_IMPLEMENTATION.md](./guides/payment/PAYMENT_IMPLEMENTATION.md) | پیاده‌سازی در فرانت |
+| [guides/payment/plans-pricing-api.md](./guides/payment/plans-pricing-api.md) | قیمت و مدت اشتراک از API (نه hard-code) |
 
 ### ادمین پنل
 | سند | توضیح |

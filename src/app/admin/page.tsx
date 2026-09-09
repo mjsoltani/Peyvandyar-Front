@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Shield, Users, RefreshCw, Archive, Trash2 } from "lucide-react";
+import { Shield, Users, RefreshCw, Archive, Trash2, CreditCard } from "lucide-react";
 
 const CARDS = [
   {
@@ -10,6 +10,13 @@ const CARDS = [
     desc: "جستجو، فیلتر، جزئیات و مدیریت اشتراک",
     icon: Users,
     tone: "bg-blue-100 text-blue-600",
+  },
+  {
+    href: "/admin/plans",
+    title: "پلن‌ها و قیمت",
+    desc: "مبلغ و مدت اشتراک؛ منبع حقیقت بک‌اند است",
+    icon: CreditCard,
+    tone: "bg-amber-100 text-amber-700",
   },
   {
     href: "/admin/tools/digikala-sync",

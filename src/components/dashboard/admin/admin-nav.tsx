@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const LINKS = [
   { href: "/admin", label: "نمای کلی", exact: true },
   { href: "/admin/users", label: "کاربران" },
+  { href: "/admin/plans", label: "پلن‌ها" },
   { href: "/admin/tools/digikala-sync", label: "سینک دیجی‌کالا" },
   { href: "/admin/tools/archive-vendor", label: "آرشیو غرفه" },
   { href: "/admin/tools/trial-cleanup", label: "پاکسازی trial" },

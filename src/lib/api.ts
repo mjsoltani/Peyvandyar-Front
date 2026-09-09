@@ -35,6 +35,31 @@ export class ApiError extends Error {
   }
 }
 
+async function publicApiRequest<T>(endpoint: string): Promise<ApiResponse<T>> {
+  if (typeof window === "undefined") {
+    throw new ApiError("API requests can only be made from client-side");
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "GET",
+    headers: {
+      Accept: "*/*",
+    },
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new ApiError(
+      data.error || data.message || response.statusText || "خطای شبکه",
+      response.status,
+      false,
+      false,
+      data.code
+    );
+  }
+  return data;
+}
+
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -682,51 +707,70 @@ export const adminApi = {
   trialCleanup: async () => {
     return apiRequest<any>("/trial/cleanup", { method: "POST" });
   },
+
+  listPlans: async () => {
+    return apiRequest<any>("/admin/plans", { method: "GET" });
+  },
+
+  updatePlan: async (
+    planId: string,
+    body: {
+      label?: string;
+      duration_days?: number;
+      amount?: number;
+      is_active?: boolean;
+      sort_order?: number;
+    }
+  ) => {
+    return apiRequest<any>(`/admin/plans/${encodeURIComponent(planId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  },
+};
+
+export type CatalogPlan = {
+  id: string;
+  label: string;
+  duration_days: number;
+  amount: number;
+  amount_toman: number;
+  currency?: string;
+  is_active: boolean;
+  sort_order?: number;
+  updated_at?: string;
+  created_at?: string;
 };
 
 // Payment API
 export const paymentApi = {
   /**
-   * پلن‌های اشتراک موجود
+   * کاتالوگ عمومی پلن‌ها — بدون لاگین
+   * GET /api/plans
    */
-  plans: {
-    monthly: {
-      id: "monthly" as const,
-      name: "اشتراک ماهانه",
-      price: 300000, // تومان
-      duration: 30, // روز
-      description: "دسترسی کامل به تمام امکانات برای 30 روز",
-    },
-    biweekly: {
-      id: "biweekly" as const,
-      name: "اشتراک دو هفته‌ای",
-      price: 200000, // تومان
-      duration: 15, // روز
-      description: "دسترسی کامل به تمام امکانات برای 15 روز",
-    },
+  getPlans: async () => {
+    const response = await publicApiRequest<{ plans?: CatalogPlan[] }>("/plans");
+    const plans = Array.isArray((response as any)?.plans)
+      ? ((response as any).plans as CatalogPlan[])
+      : [];
+    return {
+      ...response,
+      plans: plans.filter((plan) => plan?.is_active !== false),
+    };
   },
 
   /**
-   * ایجاد پیش‌تراکنش پرداخت
+   * ایجاد پیش‌تراکنش پرداخت — فقط plan_id؛ مبلغ از بک‌اند خوانده می‌شود
    * POST /api/payment/create
    */
-  createPayment: async (params: {
-    plan_id: "monthly" | "biweekly"; // شناسه پلن
-    callback_url?: string; // آدرس callback (اختیاری - بکند default داره)
-  }) => {
-    // استفاده از callback URL بکند
-    const callbackUrl = params.callback_url || 'https://api.peyvand-yar.ir/api/payment/callback';
-
-    // بکند مستقیم فیلدها رو برمی‌گردونه (بدون data wrapper)
+  createPayment: async (params: { plan_id: string }) => {
     const response = await apiRequest<any>("/payment/create", {
       method: "POST",
       body: JSON.stringify({
         plan_id: params.plan_id,
-        callback_url: callbackUrl,
       }),
     });
-    
-    // Response structure: {success, hash_id, pay_url, reference_id, expired_at, plan_id, amount, total_amount}
+
     return response as {
       success: boolean;
       hash_id?: string;
@@ -734,10 +778,12 @@ export const paymentApi = {
       reference_id?: string;
       expired_at?: string;
       plan_id?: string;
+      duration_days?: number;
       amount?: number;
       total_amount?: number;
       error?: string;
       message?: string;
+      code?: string;
     };
   },
 
