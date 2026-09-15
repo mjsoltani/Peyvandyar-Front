@@ -8,6 +8,7 @@ import {
   SOCIAL_PLATFORM_LABELS,
   SocialPlatform,
   ApiError,
+  isSocialNotConfigured,
 } from "@/lib/api";
 import { motion } from "framer-motion";
 import {
@@ -18,17 +19,6 @@ import {
   Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-function isNotConfigured(err: unknown) {
-  if (err instanceof ApiError) {
-    return (
-      err.code === "NOT_CONFIGURED" ||
-      err.statusCode === 404 ||
-      /NOT_CONFIGURED|هنوز اتصال|تنظیم نشده/i.test(err.message)
-    );
-  }
-  return false;
-}
 
 function platformLabel(platform?: string) {
   if (!platform) return "—";
@@ -77,7 +67,10 @@ export default function SocialLogsPage() {
       setLogs(extractLogs(logsRes));
       setSummary(extractSummary(summaryRes));
     } catch (err: any) {
-      if (isNotConfigured(err)) {
+      if (
+        isSocialNotConfigured(err) ||
+        (err instanceof ApiError && err.statusCode === 404)
+      ) {
         setNotConfigured(true);
         setLogs([]);
         setSummary(null);
@@ -140,7 +133,7 @@ export default function SocialLogsPage() {
           {notConfigured && (
             <div className="mb-4 p-6 bg-white border border-slate-200 rounded-xl text-center">
               <Share2 className="w-10 h-10 text-orange-400 mx-auto mb-3" />
-              <p className="text-slate-800 font-medium mb-2">هنوز اتصال سوشیال تنظیم نشده</p>
+              <p className="text-slate-800 font-medium mb-2">هنوز اکانت سوشیالی اضافه نشده</p>
               <button
                 type="button"
                 onClick={() => router.push("/dashboard/social/settings")}

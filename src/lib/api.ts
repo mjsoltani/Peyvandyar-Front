@@ -1412,14 +1412,152 @@ export const DEFAULT_SOCIAL_TEMPLATE = `{price} تومان
 {title}
 {description}`;
 
-export interface SocialStatus {
-  success?: boolean;
+export interface SocialAccount {
+  id?: string | number;
   platform?: SocialPlatform | string;
+  chatId?: string;
   template?: string;
   isActive?: boolean;
   customerId?: number;
   updatedAt?: string;
+  extra?: Record<string, unknown>;
   [key: string]: unknown;
+}
+
+export interface SocialStatus extends SocialAccount {
+  success?: boolean;
+  accounts?: SocialAccount[];
+  connections?: SocialAccount[];
+}
+
+export type SocialSetupBody = {
+  platform: SocialPlatform | string;
+  botToken: string;
+  chatId: string;
+  template?: string;
+  extra?: Record<string, unknown>;
+};
+
+export function isSocialNotConfigured(err: unknown): boolean {
+  if (err instanceof ApiError) {
+    if (err.code === "NOT_CONFIGURED") return true;
+    return /NOT_CONFIGURED|هنوز اتصال|تنظیم نشده|ابتدا باید اتصال/i.test(
+      err.message || ""
+    );
+  }
+  return /NOT_CONFIGURED|هنوز اتصال|تنظیم نشده|ابتدا باید اتصال/i.test(
+    String((err as { message?: string })?.message || "")
+  );
+}
+
+function isMissingSocialRoute(err: unknown): boolean {
+  if (!(err instanceof ApiError)) return false;
+  if (err.statusCode === 405) return true;
+  if (err.statusCode !== 404) return false;
+  return !isSocialNotConfigured(err);
+}
+
+function unwrapSocialPayload(response: any): any {
+  if (response == null || typeof response !== "object") return response;
+  const inner = response.data;
+  if (
+    inner &&
+    typeof inner === "object" &&
+    (inner.accounts ||
+      inner.connections ||
+      inner.items ||
+      inner.platform ||
+      inner.chatId ||
+      inner.extra ||
+      Array.isArray(inner))
+  ) {
+    return inner;
+  }
+  return response;
+}
+
+function asAccount(raw: any): SocialAccount | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const { botToken: _botToken, token: _token, ...rest } = raw;
+  if (
+    rest.platform == null &&
+    rest.chatId == null &&
+    rest.customerId == null &&
+    rest.id == null &&
+    rest.template == null &&
+    rest.isActive == null
+  ) {
+    return null;
+  }
+  return rest as SocialAccount;
+}
+
+function uniqueAccounts(list: SocialAccount[]): SocialAccount[] {
+  const seen = new Set<string>();
+  const out: SocialAccount[] = [];
+  for (const item of list) {
+    const key =
+      item.id != null
+        ? `id:${item.id}`
+        : item.customerId != null
+          ? `c:${item.customerId}`
+          : `p:${item.platform ?? ""}:${item.chatId ?? ""}:${item.updatedAt ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
+export function normalizeSocialAccounts(response: any): SocialAccount[] {
+  const root = unwrapSocialPayload(response);
+  if (!root) return [];
+
+  const buckets: any[] = [];
+  const sources = [root, root.extra, root.data];
+  for (const src of sources) {
+    if (!src || typeof src !== "object") continue;
+    buckets.push(src.accounts, src.connections, src.items);
+    if (Array.isArray(src)) buckets.push(src);
+  }
+
+  const collected: SocialAccount[] = [];
+  for (const bucket of buckets) {
+    if (!Array.isArray(bucket)) continue;
+    for (const item of bucket) {
+      const account = asAccount(item);
+      if (account) collected.push(account);
+    }
+  }
+
+  if (collected.length) return uniqueAccounts(collected);
+
+  const single = asAccount(root);
+  return single ? [single] : [];
+}
+
+export function socialAccountId(account: SocialAccount): string | number | undefined {
+  if (account.id != null && String(account.id) !== "") return account.id;
+  if (account.customerId != null) return account.customerId;
+  return undefined;
+}
+
+/** اگر GET/POST /social/accounts در این نشست 404 شده، دوباره صدا نزن */
+let socialAccountsCollection: boolean | null = null;
+
+function accountMeta(
+  account: Partial<SocialAccount> & Partial<SocialSetupBody>,
+  token?: string
+) {
+  return {
+    ...(account.id != null ? { id: account.id } : {}),
+    ...(account.customerId != null ? { customerId: account.customerId } : {}),
+    platform: account.platform,
+    chatId: account.chatId,
+    template: account.template,
+    isActive: account.isActive,
+    ...(token ? { botToken: token } : {}),
+  };
 }
 
 export const socialApi = {
@@ -1428,27 +1566,166 @@ export const socialApi = {
     return apiRequest<any>("/social/status", { method: "GET" });
   },
 
+  hasAccountsCollection: () => socialAccountsCollection === true,
+
+  /** لیست اکانت‌ها: GET /social/accounts و در صورت نبودن مسیر، GET /social/status */
+  listAccounts: async (): Promise<SocialAccount[]> => {
+    if (socialAccountsCollection !== false) {
+      try {
+        const response = await apiRequest<any>("/social/accounts", { method: "GET" });
+        socialAccountsCollection = true;
+        return normalizeSocialAccounts(response);
+      } catch (err) {
+        if (isSocialNotConfigured(err)) {
+          socialAccountsCollection = true;
+          return [];
+        }
+        if (!isMissingSocialRoute(err) && !(err instanceof ApiError && err.statusCode === 404)) {
+          throw err;
+        }
+        socialAccountsCollection = false;
+      }
+    }
+    try {
+      const response = await apiRequest<any>("/social/status", { method: "GET" });
+      return normalizeSocialAccounts(response);
+    } catch (statusErr) {
+      if (
+        isSocialNotConfigured(statusErr) ||
+        (statusErr instanceof ApiError && statusErr.statusCode === 404)
+      ) {
+        return [];
+      }
+      throw statusErr;
+    }
+  },
+
   /** PUT /api/social/setup */
-  setup: async (body: {
-    platform: SocialPlatform | string;
-    botToken: string;
-    chatId: string;
-    template?: string;
-    extra?: Record<string, unknown>;
-  }) => {
+  setup: async (body: SocialSetupBody) => {
     return apiRequest<any>("/social/setup", {
       method: "PUT",
       body: JSON.stringify(body),
     });
   },
 
+  /** افزودن اکانت جدید بدون جایگزینی اکانت‌های قبلی */
+  addAccount: async (body: SocialSetupBody, existing: SocialAccount[] = []) => {
+    if (socialAccountsCollection !== false) {
+      try {
+        const created = await apiRequest<any>("/social/accounts", {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+        socialAccountsCollection = true;
+        return created;
+      } catch (err) {
+        if (!isMissingSocialRoute(err) && !isSocialNotConfigured(err)) throw err;
+        if (isMissingSocialRoute(err)) socialAccountsCollection = false;
+      }
+    }
+    const accounts = [
+      ...existing.map((account) => accountMeta(account)),
+      accountMeta(body, body.botToken),
+    ];
+    return apiRequest<any>("/social/setup", {
+      method: "PUT",
+      body: JSON.stringify({
+        platform: body.platform,
+        botToken: body.botToken,
+        chatId: body.chatId,
+        template: body.template,
+        extra: { ...(body.extra || {}), accounts },
+        accounts,
+      }),
+    });
+  },
+
+  updateAccount: async (
+    id: string | number | undefined,
+    body: {
+      platform: SocialPlatform | string;
+      chatId: string;
+      botToken?: string;
+      template?: string;
+    }
+  ) => {
+    const payload: Record<string, unknown> = {
+      platform: body.platform,
+      chatId: body.chatId,
+    };
+    if (body.template != null) payload.template = body.template;
+    if (body.botToken?.trim()) payload.botToken = body.botToken.trim();
+
+    if (id != null && String(id) !== "" && socialAccountsCollection !== false) {
+      try {
+        return await apiRequest<any>(
+          `/social/accounts/${encodeURIComponent(String(id))}`,
+          { method: "PUT", body: JSON.stringify(payload) }
+        );
+      } catch (err) {
+        if (!isMissingSocialRoute(err)) throw err;
+        socialAccountsCollection = false;
+      }
+    }
+
+    if (!body.botToken?.trim()) {
+      throw new ApiError(
+        "برای ذخیره این اکانت، توکن ربات را دوباره وارد کنید",
+        400
+      );
+    }
+
+    return socialApi.setup({
+      platform: body.platform,
+      botToken: body.botToken.trim(),
+      chatId: body.chatId,
+      template: body.template,
+    });
+  },
+
+  removeAccount: async (id?: string | number) => {
+    if (id != null && String(id) !== "" && socialAccountsCollection !== false) {
+      try {
+        return await apiRequest<any>(
+          `/social/accounts/${encodeURIComponent(String(id))}`,
+          { method: "DELETE" }
+        );
+      } catch (err) {
+        if (!isMissingSocialRoute(err)) throw err;
+        socialAccountsCollection = false;
+        try {
+          return await apiRequest<any>(
+            `/social/setup/${encodeURIComponent(String(id))}`,
+            { method: "DELETE" }
+          );
+        } catch (setupErr) {
+          if (!isMissingSocialRoute(setupErr)) throw setupErr;
+        }
+      }
+    }
+
+    return apiRequest<any>("/social/setup", { method: "DELETE" });
+  },
+
   /** POST /api/social/publish */
-  publish: async (body: { productId: string | number; template?: string }) => {
+  publish: async (body: {
+    productId: string | number;
+    template?: string;
+    accountId?: string | number;
+    accountIds?: Array<string | number>;
+  }) => {
+    const accountIds = body.accountIds?.filter(
+      (id) => id != null && String(id) !== ""
+    );
     return apiRequest<any>("/social/publish", {
       method: "POST",
       body: JSON.stringify({
         productId: String(body.productId),
         ...(body.template ? { template: body.template } : {}),
+        ...(body.accountId != null && String(body.accountId) !== ""
+          ? { accountId: body.accountId }
+          : {}),
+        ...(accountIds?.length ? { accountIds } : {}),
       }),
     });
   },

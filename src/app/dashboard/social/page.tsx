@@ -10,7 +10,7 @@ const options = [
   {
     id: "settings",
     title: "دیدن و تنظیمات",
-    description: "وضعیت اتصال را ببینید و پلتفرم، توکن و کانال را تنظیم کنید",
+    description: "اکانت‌های سوشیال را ببینید و هر تعداد کانال که می‌خواهید اضافه کنید",
     icon: Settings2,
     route: "/dashboard/social/settings",
   },
@@ -41,7 +41,7 @@ export default function SocialHubPage() {
             <div>
               <h1 className="text-2xl font-bold text-slate-800">شبکه‌های اجتماعی</h1>
               <p className="text-sm text-slate-500">
-                اتصال کانال و انتشار محصولات غرفه در ایتا، بله و سایر پلتفرم‌ها
+                چند اکانت سوشیال وصل کنید و محصولات غرفه را در ایتا، بله و بقیه پلتفرم‌ها منتشر کنید
               </p>
             </div>
           </div>

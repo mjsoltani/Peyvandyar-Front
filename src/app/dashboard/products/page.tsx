@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAuthToken } from "@/lib/auth";
-import { productsApi, userApi, socialApi, ApiError } from "@/lib/api";
+import { productsApi, userApi, socialApi, socialAccountId, isSocialNotConfigured } from "@/lib/api";
 import { motion } from "framer-motion";
 import { 
   Search,
@@ -75,21 +75,33 @@ export default function ProductsPage() {
 
     try {
       setPublishingId(product.id);
-      const response: any = await socialApi.publish({ productId: product.id });
+      const accounts = await socialApi.listAccounts();
+      if (!accounts.length) {
+        showPublishToast("err", "ابتدا حداقل یک اکانت سوشیال اضافه کنید");
+        setTimeout(() => router.push("/dashboard/social/settings"), 800);
+        return;
+      }
+      const accountIds = accounts
+        .map((account) => socialAccountId(account))
+        .filter((id): id is string | number => id != null);
+      const response: any = await socialApi.publish({
+        productId: product.id,
+        ...(accountIds.length ? { accountIds } : {}),
+      });
       const data = response.data ?? response;
       if (data.success === false) {
         showPublishToast("err", data.error || data.message || "انتشار ناموفق بود");
         return;
       }
-      showPublishToast("ok", data.message || "محصول در شبکه‌های اجتماعی منتشر شد");
+      showPublishToast(
+        "ok",
+        data.message ||
+          (accounts.length > 1
+            ? "محصول در اکانت‌های متصل منتشر شد"
+            : "محصول در شبکه‌های اجتماعی منتشر شد")
+      );
     } catch (err: any) {
-      const notConfigured =
-        err instanceof ApiError &&
-        (err.code === "NOT_CONFIGURED" ||
-          err.statusCode === 400 ||
-          /NOT_CONFIGURED|ابتدا باید اتصال|تنظیم نشده/i.test(err.message || ""));
-
-      if (notConfigured || /NOT_CONFIGURED|ابتدا باید اتصال|تنظیم نشده/i.test(err.message || "")) {
+      if (isSocialNotConfigured(err)) {
         showPublishToast("err", "ابتدا اتصال شبکه‌های اجتماعی را تنظیم کنید");
         setTimeout(() => router.push("/dashboard/social/settings"), 800);
         return;
