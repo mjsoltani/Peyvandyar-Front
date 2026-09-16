@@ -46,7 +46,8 @@
 ### کپی محصول / چندفروشگاهی
 | سند | توضیح |
 |-----|--------|
-| [guides/products/COPY_PRODUCT_GUIDE.md](./guides/products/COPY_PRODUCT_GUIDE.md) | کپی محصول |
+| [guides/products/COPY_PRODUCT_GUIDE.md](./guides/products/COPY_PRODUCT_GUIDE.md) | کپی محصول تکی باسلام با ویرایش فیلدها |
+| [guides/products/copy-from-booth-api.md](./guides/products/copy-from-booth-api.md) | کپی دسته‌ای از غرفه عمومی باسلام به غرفه کاربر |
 | [guides/products/MULTI_VENDOR_SOLUTION.md](./guides/products/MULTI_VENDOR_SOLUTION.md) | چندفروشگاهی |
 
 ## API و عملیات
