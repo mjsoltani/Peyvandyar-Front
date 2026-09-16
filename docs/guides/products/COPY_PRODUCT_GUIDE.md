@@ -312,6 +312,7 @@ onChange={(e) => handleVariantChange(idx, "price", parseInt(e.target.value) * 10
 
 ## منابع
 
+- [کپی دسته‌ای از غرفه باسلام](./copy-from-booth-api.md)
 - [API Endpoints](../../api/API-ENDPOINTS.json)
 - [Design System Rules](./.kiro/steering/design-system.md)
 - [Payment Guide](./PAYMENT_FRONTEND_GUIDE.md)
