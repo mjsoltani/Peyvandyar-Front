@@ -1236,8 +1236,42 @@ export interface MixinConnection {
   last_validated_at?: string | null;
   last_error?: string | null;
   is_active?: boolean;
+  /** همگام‌سازی خودکار باسلام → میکسین */
+  export_auto_sync?: boolean;
+  /** دسته‌بندی پیش‌فرض میکسین برای export */
+  export_category_id?: number | null;
   created_at?: string;
   updated_at?: string;
+  [key: string]: unknown;
+}
+
+export interface MixinExportLink {
+  id: number;
+  basalam_product_id?: string | number;
+  mixin_product_id?: string | number;
+  basalam_title?: string;
+  last_price?: number | null;
+  last_stock?: number | null;
+  last_available?: boolean | null;
+  last_synced_at?: string | null;
+  last_error?: string | null;
+  last_error_details?: unknown;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
+export type MixinExportSyncMode = "stock_price" | "full";
+
+export interface MixinExportSummary {
+  total?: number;
+  created?: number;
+  updated?: number;
+  linked_existing?: number;
+  skipped?: number;
+  failed?: number;
+  aborted?: boolean;
+  abort_reason?: string;
   [key: string]: unknown;
 }
 
@@ -1382,6 +1416,63 @@ export const mixinApi = {
     return apiRequest<any>("/products/mixin/sync", {
       method: "POST",
       body: JSON.stringify(body ?? {}),
+    });
+  },
+
+  /**
+   * انتقال محصولات غرفه باسلام → میکسین
+   * POST /api/products/mixin/export
+   * پاسخ ممکن است inline (۲۰۰) یا queued (۲۰۲ + job_id) باشد.
+   */
+  exportProducts: async (body?: {
+    product_ids?: number[];
+    include_images?: boolean;
+    category_id?: number;
+    create_missing?: boolean;
+    max_products?: number;
+  }) => {
+    return apiRequest<any>("/products/mixin/export", {
+      method: "POST",
+      body: JSON.stringify(body ?? {}),
+    });
+  },
+
+  /**
+   * همگام‌سازی قیمت/موجودی محصولات منتقل‌شده باسلام → میکسین
+   * POST /api/products/mixin/export/sync
+   */
+  exportSync: async (body?: {
+    product_ids?: number[];
+    mode?: MixinExportSyncMode;
+  }) => {
+    return apiRequest<any>("/products/mixin/export/sync", {
+      method: "POST",
+      body: JSON.stringify(body ?? {}),
+    });
+  },
+
+  /** GET /api/products/mixin/export/links */
+  getExportLinks: async (params?: { limit?: number; offset?: number }) => {
+    const queryParams = new URLSearchParams();
+    queryParams.append("limit", String(params?.limit ?? 100));
+    queryParams.append("offset", String(params?.offset ?? 0));
+    return apiRequest<any>(
+      `/products/mixin/export/links?${queryParams.toString()}`,
+      { method: "GET" }
+    );
+  },
+
+  /**
+   * تنظیمات export (سینک خودکار / دسته پیش‌فرض)
+   * PUT /api/products/mixin/export/settings
+   */
+  updateExportSettings: async (body: {
+    auto_sync?: boolean;
+    category_id?: number | null;
+  }) => {
+    return apiRequest<any>("/products/mixin/export/settings", {
+      method: "PUT",
+      body: JSON.stringify(body),
     });
   },
 

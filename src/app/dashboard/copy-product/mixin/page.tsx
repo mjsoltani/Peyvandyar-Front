@@ -9,6 +9,7 @@ import {
   Link2,
   ArrowRight,
   Copy,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,13 @@ const options = [
     description: "محصولات Mixin را ببینید، تکی منتشر کنید یا چندتایی ایمپورت کنید",
     icon: Package,
     route: "/dashboard/copy-product/mixin/catalog",
+  },
+  {
+    id: "export",
+    title: "انتقال به میکسین",
+    description: "محصولات غرفه باسلام را به میکسین بفرستید و قیمت/موجودی را همگام کنید",
+    icon: Upload,
+    route: "/dashboard/copy-product/mixin/export",
   },
   {
     id: "links",
@@ -62,12 +70,12 @@ export default function MixinHubPage() {
             <div>
               <h1 className="text-2xl font-bold text-slate-800">میکسین</h1>
               <p className="text-sm text-slate-500">
-                اتصال فروشگاه Mixin و ایمپورت محصولات به غرفه باسلام
+                اتصال فروشگاه Mixin، ایمپورت به باسلام و انتقال باسلام به میکسین
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {options.map((option, idx) => (
               <motion.button
                 key={option.id}

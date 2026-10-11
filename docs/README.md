@@ -24,7 +24,8 @@
 ### Mixin
 | سند | توضیح |
 |-----|--------|
-| [guides/mixin/mixin-frontend-api.md](./guides/mixin/mixin-frontend-api.md) | اتصال، کاتالوگ، لینک‌ها |
+| [guides/mixin/mixin-frontend-api.md](./guides/mixin/mixin-frontend-api.md) | ایمپورت Mixin → باسلام (اتصال، کاتالوگ، لینک‌ها) |
+| [guides/mixin/frontend-mixin-export.md](./guides/mixin/frontend-mixin-export.md) | انتقال و سینک باسلام → Mixin |
 
 ### شبکه‌های اجتماعی
 | سند | توضیح |
@@ -48,7 +49,14 @@
 |-----|--------|
 | [guides/products/COPY_PRODUCT_GUIDE.md](./guides/products/COPY_PRODUCT_GUIDE.md) | کپی محصول تکی باسلام با ویرایش فیلدها |
 | [guides/products/copy-from-booth-api.md](./guides/products/copy-from-booth-api.md) | کپی دسته‌ای از غرفه عمومی باسلام به غرفه کاربر |
+| [guides/products/copy-gold-coins-user-guide.md](./guides/products/copy-gold-coins-user-guide.md) | راهنمای کاربر: کپی سکه/طلا و محدودیت فعلی |
 | [guides/products/MULTI_VENDOR_SOLUTION.md](./guides/products/MULTI_VENDOR_SOLUTION.md) | چندفروشگاهی |
+
+## گزارش مشکلات بک‌اند
+
+| سند | توضیح |
+|-----|--------|
+| [backend-issues/parent-child-sync-issues.md](./backend-issues/parent-child-sync-issues.md) | سینک والد/فرزند، نشت توکن، 403/422 کپی محصول طلا (`product_attribute`) |
 
 ## API و عملیات
 

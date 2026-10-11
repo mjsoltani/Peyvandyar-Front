@@ -199,13 +199,25 @@ export default function MixinConnectionPage() {
                       هشدار: {connection.last_error}
                     </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => router.push("/dashboard/copy-product/mixin/catalog")}
-                    className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
-                  >
-                    رفتن به کاتالوگ
-                  </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => router.push("/dashboard/copy-product/mixin/catalog")}
+                      className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
+                    >
+                      رفتن به کاتالوگ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/dashboard/copy-product/mixin/export")}
+                      className="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl"
+                    >
+                      انتقال به میکسین
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    برای انتقال محصولات به میکسین، کلید API باید دسترسی نوشتن داشته باشد.
+                  </p>
                 </div>
               )}
 
