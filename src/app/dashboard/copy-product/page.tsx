@@ -12,6 +12,7 @@ import {
   Clock,
   ArrowRight,
   Store,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +64,15 @@ export default function CopyProductPage() {
       isActive: true,
       comingSoon: false,
       route: "/dashboard/copy-product/mixin",
+    },
+    {
+      id: "woocommerce",
+      title: "اضافه کردن از ووکامرس",
+      description: "کاتالوگ فروشگاه ووکامرس را بخوانید و با OpenAPI باسلام در غرفه بسازید",
+      icon: Globe,
+      isActive: true,
+      comingSoon: false,
+      route: "/dashboard/copy-product/woocommerce",
     },
     {
       id: "excel",

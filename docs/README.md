@@ -27,6 +27,11 @@
 | [guides/mixin/mixin-frontend-api.md](./guides/mixin/mixin-frontend-api.md) | ایمپورت Mixin → باسلام (اتصال، کاتالوگ، لینک‌ها) |
 | [guides/mixin/frontend-mixin-export.md](./guides/mixin/frontend-mixin-export.md) | انتقال و سینک باسلام → Mixin |
 
+### ووکامرس
+| سند | توضیح |
+|-----|--------|
+| [guides/woocommerce/woocommerce-frontend-api.md](./guides/woocommerce/woocommerce-frontend-api.md) | ایمپورت ووکامرس → باسلام؛ داده و ساخت محصول سمت بک‌اند |
+
 ### شبکه‌های اجتماعی
 | سند | توضیح |
 |-----|--------|

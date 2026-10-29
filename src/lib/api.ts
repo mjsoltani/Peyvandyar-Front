@@ -1482,6 +1482,118 @@ export const mixinApi = {
   },
 };
 
+export interface WooConnection {
+  id?: number;
+  vendor_id?: number;
+  vendor_title?: string;
+  vendor_identifier?: string;
+  vendor_active?: boolean;
+  shop_url?: string;
+  currency_code?: string;
+  source?: "store" | "v3" | string;
+  last_error?: string | null;
+  is_active?: boolean;
+}
+
+export interface WooProduct {
+  id: number;
+  name: string;
+  sku?: string;
+  price_toman?: number | null;
+  in_stock?: boolean;
+  image_url?: string | null;
+  has_variations?: boolean;
+  permalink?: string | null;
+}
+
+export interface WooCategory {
+  id: number;
+  title: string;
+  path: string;
+}
+
+export interface WooAttribute {
+  id: number;
+  title: string;
+  required?: boolean;
+  unit?: string | null;
+  options?: { id: number; title: string }[];
+}
+
+export const woocommerceApi = {
+  getConnection: async () => {
+    return apiRequest<any>("/products/woocommerce/connection", { method: "GET" });
+  },
+
+  connect: async (body: {
+    shop_url: string;
+    consumer_key?: string;
+    consumer_secret?: string;
+  }) => {
+    return apiRequest<any>("/products/woocommerce/connect", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  disconnect: async () => {
+    return apiRequest<any>("/products/woocommerce/connection", { method: "DELETE" });
+  },
+
+  getProducts: async (params?: { page?: number; page_size?: number; search?: string }) => {
+    const query = new URLSearchParams();
+    query.set("page", String(params?.page ?? 1));
+    query.set("page_size", String(params?.page_size ?? 20));
+    if (params?.search) query.set("search", params.search);
+    return apiRequest<any>(`/products/woocommerce/products?${query.toString()}`, {
+      method: "GET",
+    });
+  },
+
+  searchCategories: async (search: string) => {
+    const query = new URLSearchParams();
+    if (search) query.set("search", search);
+    return apiRequest<any>(`/products/woocommerce/categories?${query.toString()}`, {
+      method: "GET",
+    });
+  },
+
+  getAttributes: async (categoryId: number) => {
+    return apiRequest<any>(`/products/woocommerce/categories/${categoryId}/attributes`, {
+      method: "GET",
+    });
+  },
+
+  importCatalog: async (body: {
+    product_ids?: number[];
+    category_id: number;
+    status?: number;
+    preparation_days?: number;
+    package_weight?: number;
+    default_stock?: number;
+    skip_existing?: boolean;
+    only_priced?: boolean;
+    product_attribute?: { attribute_id: number; value?: string; selected_values?: number[] }[];
+  }) => {
+    return apiRequest<any>("/products/ingest/woocommerce/catalog/import", {
+      method: "POST",
+      body: JSON.stringify({
+        status: 2976,
+        preparation_days: 2,
+        package_weight: 600,
+        default_stock: 5,
+        skip_existing: true,
+        only_priced: true,
+        ...body,
+      }),
+    });
+  },
+
+  getJobStatus: async (jobId: string) => {
+    return syncBoothsApi.getJobStatus(jobId);
+  },
+};
+
 // Social publish API (ایتا، بله، …)
 export type SocialPlatform =
   | "eitaa"
